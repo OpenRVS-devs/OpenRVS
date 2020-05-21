@@ -10,12 +10,12 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 
 First, you will need to download [Twi's Raven Shield SDK](https://www.moddb.com/mods/raven-shield-software-development-kit). Put this somewhere convenient (such as `C:\rvssdk`).
 
-The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories) to be inside the `Code Environment` directory in the SDK folder. Be sure to copy `PATH\TO\GIT\REPO\{OpenRVS,OpenRenderFix}` to `PATH\TO\SDK\Code Environment` to operate on the latest version of your code.
+The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories) to be inside the `Code Environment` directory in the SDK folder. Be sure to copy `\PATH\TO\GIT\REPO\{OpenRVS,OpenRenderFix}` to `\PATH\TO\SDK\Code Environment` to operate on the latest version of your code.
 
 1. Open a command prompt in the `SDK2` directory.
 1. Run `"SDK ToolBelt.bat"` to enter the CLI
 1. Run `160` to activate the SDK for Raven Shield v1.60
-1. Type `compile` to enter the compiler, and then type `OpenRVS` to compile OpenRVS. Address any errors or warnings if necessary. Type `log` to show more detail
+1. Type `compile` to enter the compiler, and then type `OpenRVS` to compile OpenRVS. Address any errors or warnings if necessary. Type `log` to show more detail. Note: If you see an error regarding `appPreExit`, this can be ignored. This happens when building 1.60 code with the 1.56 compiler, and the compiled output will still be created successfully at `\PATH\TO\SDK\OpenRVS.u`
 1. Type `strip` to enter the symbol/docstring stripper, and then type `OpenRVS` to run it. This will reduce output file size by around 60%
 1. Copy `OpenRVS.u` and/or `OpenRenderFix.u` to your game directory's `system` folder (both client and server)
 1. Test your changes in-game by connecting to the server
