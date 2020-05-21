@@ -330,7 +330,6 @@ function Notify(UWindowDialogControl C, byte E)
 			}
 			break;
 		}
-		
 	}
 	else if (E == DE_DoubleClick)
 	{
