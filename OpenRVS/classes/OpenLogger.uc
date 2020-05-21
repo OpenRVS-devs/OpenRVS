@@ -1,7 +1,5 @@
 class OpenLogger extends Object;
 
-var config bool bDebugLoggingEnabled;
-
 // DebugLog write a message to stdout prefixed with ***DEBUG***.
 static function DebugLog(string s)
 {
