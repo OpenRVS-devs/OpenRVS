@@ -66,39 +66,39 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 //if internet servers can be preserved, this area may no longer be needed
 function Manager( UWindowWindow _pCurrentWidget )
 {
-   local FLOAT elapsedTime;	  // Elapsed time waiting for response from server
+	local FLOAT elapsedTime;	  // Elapsed time waiting for response from server
 
-   switch ( eState )
-   {
-	  case EJOINIP_WAITING_FOR_UBICOMLOGIN:
-		 if ( m_GameService.m_bLoggedInUbiDotCom )
-		 {
+	switch ( eState )
+	{
+		case EJOINIP_WAITING_FOR_UBICOMLOGIN:
+		if ( m_GameService.m_bLoggedInUbiDotCom )
+		{
 			PopUpBoxDone(MR_OK, EPopUpID_EnterIP);
-		 }
-		 break;
+		}
+		break;
 
-	  case EJOINIP_WAITING_FOR_BEACON:
-		 class'OpenLogger'.static.DebugLog(" **** TESTING **** WAITING FOR BEACON");
-		 // Response has been received from the server
-		 if ( m_GameService.m_ClientBeacon.PreJoinInfo.bResponseRcvd )
-		 {
+		case EJOINIP_WAITING_FOR_BEACON:
+		class'OpenLogger'.static.DebugLog(" **** TESTING **** WAITING FOR BEACON");
+		// Response has been received from the server
+		if ( m_GameService.m_ClientBeacon.PreJoinInfo.bResponseRcvd )
+		{
 			class'OpenLogger'.static.DebugLog(" **** TESTING **** RECEIVED A RESPONSE");
 			class'OpenLogger'.static.DebugLog(" **** TESTING **** INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer);
 			// Verify that the server is the same version as the game
 			if ( Root.Console.ViewportOwner.Actor.GetGameVersion() != m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion )
 			{
-			   class'OpenLogger'.static.DebugLog(" **** TESTING **** VERSION FAIL");
-			   eState = EJOINIP_BEACON_FAIL;
-			   m_pPleaseWait.HideWindow();
-			   m_pError.ShowWindow();
-			   R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_BadVersion","R6Menu");
+				class'OpenLogger'.static.DebugLog(" **** TESTING **** VERSION FAIL");
+				eState = EJOINIP_BEACON_FAIL;
+				m_pPleaseWait.HideWindow();
+				m_pError.ShowWindow();
+				R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_BadVersion","R6Menu");
 			}
 			else if ( R6Console(Root.console).m_bNonUbiMatchMaking )
 			{
-			   class'OpenLogger'.static.DebugLog(" **** TESTING **** NON UBI MATCHMAKING");
-			   _pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
-			   if (!m_bStartByCmdLine)
-				  HideWindow();
+				class'OpenLogger'.static.DebugLog(" **** TESTING **** NON UBI MATCHMAKING");
+				_pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
+				if (!m_bStartByCmdLine)
+				HideWindow();
 			}
 			// Only allow user to join internet servers using the Join IP button
 			//BYPASSED!
@@ -114,30 +114,30 @@ function Manager( UWindowWindow _pCurrentWidget )
 			else
 			{
 				//set to always false? seems to prevent hang when joining my personal server
-			   m_bRoomValid = false;//( m_GameService.m_ClientBeacon.PreJoinInfo.iLobbyID != 0 && m_GameService.m_ClientBeacon.PreJoinInfo.iGroupID != 0 );
-			   _pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
-			   class'OpenLogger'.static.DebugLog(" **** TESTING **** SUCCESS");
-			   class'OpenLogger'.static.DebugLog(" **** TESTING **** ROOM VALID: " $ m_bRoomValid);
-			   HideWindow();
+				m_bRoomValid = false;//( m_GameService.m_ClientBeacon.PreJoinInfo.iLobbyID != 0 && m_GameService.m_ClientBeacon.PreJoinInfo.iGroupID != 0 );
+				_pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
+				class'OpenLogger'.static.DebugLog(" **** TESTING **** SUCCESS");
+				class'OpenLogger'.static.DebugLog(" **** TESTING **** ROOM VALID: " $ m_bRoomValid);
+				HideWindow();
 			}
-		 }
-		 else
-		 {
+		}
+		else
+		{
 			// Check if beacon has timed out, if so put up error message
 			elapsedTime = m_GameService.NativeGetSeconds() - m_fBeaconTime;
 			if ( elapsedTime > K_MAX_TIME_BEACON )
 			{
-			   class'OpenLogger'.static.DebugLog(" **** TESTING **** TIME OUT!");
-			   eState = EJOINIP_BEACON_FAIL;
-			   m_pPleaseWait.HideWindow();
-			   m_pError.ShowWindow();
-			   R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_NoServer","R6Menu");
+				class'OpenLogger'.static.DebugLog(" **** TESTING **** TIME OUT!");
+				eState = EJOINIP_BEACON_FAIL;
+				m_pPleaseWait.HideWindow();
+				m_pError.ShowWindow();
+				R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_NoServer","R6Menu");
 			}
-		 }
+		}
 
-		 break;
-		 //commented out by UBI:
-	     //case EJOINIP_BEACON_FAIL:
-		 // break;
-   }
+		break;
+		//commented out by UBI:
+		//case EJOINIP_BEACON_FAIL:
+		// break;
+	}
 }
