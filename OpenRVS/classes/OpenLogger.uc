@@ -4,10 +4,10 @@ var config bool bDebugLoggingEnabled;
 
 static function DebugLog(string s)
 {
-    if (bDebugLoggingEnabled)
-    {
-        log(s);
-    }
+	if (bDebugLoggingEnabled)
+	{
+		log(s);
+	}
 }
 
 defaultproperties

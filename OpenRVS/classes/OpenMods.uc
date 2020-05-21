@@ -32,7 +32,7 @@ function SetMenuMODS()
 		pFileManager.GetFileName(i2,szIniFilename);
 		if ( szIniFilename != "" )
 		{
-			aMod = new(none) class'Engine.R6Mod';    
+			aMod = new(none) class'Engine.R6Mod';	
 			aMod.Init(szIniFilename);
 			j = 0;
 			bFound = false;
