@@ -1,9 +1,12 @@
 # OpenRVS
 A patch to fix Ubisoft's mistakes (intentional and otherwise).
+
 Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
 Including: CD key bypass, UBI.com ID bypass, server registration bypass, mod system fixes, new features, and multiple bugfixes and connection fixes
+
 Author: Twi
+
 Thanks to: Tony, Psycho, Legacy, juguLator01, SMC and ShadowSquad clans, and the AllR6 community
 
 # DISCLAIMER:
@@ -12,6 +15,7 @@ Please note, this project was not made with the intention of allowing pirated co
 
 # How to update if you have an older version of the patch installed:
 Clients just copy OpenRVS.u, openrvs.ini, Servers.list, and R6ClassDefines.ini to your system folder and overwrite the old files.
+
 Server owners should copy OpenRVS.u and R6ClassDefines.ini to their System folder. Optionally, they can also copy OpenRenderFix.utx to their server's Textures folder, and follow server installation step #4 below.  This is optional but will ensure that clients with widescreen displays and high field of views will render their guns properly.
 
 # How to install fresh on your personal Ravenshield copy:
@@ -19,9 +23,13 @@ Server owners should copy OpenRVS.u and R6ClassDefines.ini to their System folde
 2.    Play the game!
 
 Additional Info:
+
 3.    The OpenRVS patch will automatically attempt to fetch a list of good servers from rvsgaming.org, a fan-owned community hub.  If this fetch fails, a list of known good servers found in the Servers.list file will be loaded instead.  You can edit this file to include other servers you know of.  You can also use the Join IP button to connect to any server you know the IP address of.  You can also edit openrvs.ini to fetch your server list from an alternate online provider.
+
 4.    As of version 1.1, OpenRVS also fixes UBISoft's locked mods system. You are now able to play expansion-style mods (such as Ordnance Project or R6 Zombies) without needing a mod unlocker. You can also play *some* mods meant for multiplayer only in your singleplayer game.
+
 5.    As of version 1.3, OpenRVS now allows installation of custom game types in singleplayer. Simply place the files for a mod game type in the Mods folder, and go to Custom Mission menu to play.
+
 6.    As of version 1.4, OpenRVS now supports custom field of view settings as well as starting up the game in a mod. To change your FOV, open up openrvs.ini and set the FOV to the number you like, from 65 to 140 (default 90, recommend 105 or 110 for widescreen). To start the game in a mod, put the mod's keyword in the ForceStartMod entry in openrvs.ini - for example, "AthenaSword" or "SupplyDrop". Please note the mod keyword is case sensitive.
 
 # How to install on your server:
