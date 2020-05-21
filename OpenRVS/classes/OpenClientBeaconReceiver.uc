@@ -1,3 +1,6 @@
+// WARNING: This file must be encoded as "Western (Windows 1252)" and not UTF-8.
+// Otherwise, the Pilcrow Sign (¶) will not be correctly parsed by Unreal Engine.
+
 class OpenClientBeaconReceiver extends ClientBeaconReceiver transient;
 
 //new in 0.8
