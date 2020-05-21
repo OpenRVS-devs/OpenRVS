@@ -2,7 +2,7 @@
 
 Author: Twi
 
-A patch to fix Ubisoft's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
+A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
 ## Building
 
@@ -46,7 +46,7 @@ A patch to fix Ubisoft's mistakes (intentional and otherwise). Allows multiplaye
 
 #### Release 1.1
 
-- UBISoft mod locking removed; any mod can now work without extra help
+- Ubisoft mod locking removed; any mod can now work without extra help
 
 #### Release 1.0
 
