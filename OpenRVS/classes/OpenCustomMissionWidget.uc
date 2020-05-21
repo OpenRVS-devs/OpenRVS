@@ -336,7 +336,7 @@ function Notify(UWindowDialogControl C, byte E)
 		// start a game on a double-click on the list
 		if (C == m_GameLevelBox) && ( ValidateBeforePlanning() )
 		{
-				GotoPlanning();	
+			GotoPlanning();	
 		}
 	}
 }

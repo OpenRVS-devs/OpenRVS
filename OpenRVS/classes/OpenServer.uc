@@ -38,7 +38,7 @@ function Tick(float delta)
 	{
 		P = R6PlayerController(C);
 		//doesn't have valid cd key
-		if ( P != none ) && if ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID )
+		if ( P != none ) && ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID )
 		{
 			if ( !bLogged )
 			{
@@ -72,7 +72,7 @@ function Tick(float delta)
 		//but lag for high-ping players always meant that the enemy would "pop" in
 		//this fix requires marginally more bandwidth but forces the server to replicate all alive pawns at all times
 		Pawn = C.Pawn;
-		if ( Pawn != none ) && if ( Pawn.IsAlive() ) && ( !Pawn.bAlwaysRelevant )
+		if ( Pawn != none ) && ( Pawn.IsAlive() ) && ( !Pawn.bAlwaysRelevant )
 		{
 			Pawn.bAlwaysRelevant = true;
 		}
