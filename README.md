@@ -3,7 +3,7 @@ Author: Twi
 
 A patch to fix Ubisoft's mistakes (intentional and otherwise).  Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
-Including: CD key bypass, UBI.com ID bypass, server registration bypass, mod system fixes, new features, and multiple bugfixes and connection fixes.  Thanks to: Tony, Psycho, Legacy, juguLator01, SMC and ShadowSquad clans, and the AllR6 community
+Including: CD key bypass, UBI.com ID bypass, server registration bypass, mod system fixes, new features, and multiple bugfixes and connection fixes.  Thanks to: Tony, Psycho, Legacy, juguLator01, SMC and ShadowSquad clans, and the AllR6 community.
 
 # DISCLAIMER:
 OpenRVS is a private project, made in response to UBISoft's choice to cease validation of cd keys for the game Rainbow Six 3: Raven Shield.  Although Raven Shield players have legally purchased the game, service for these players has now ceased.  Because UBISoft had shut down all support for online Raven Shield (as of September 24, 2016), I have decided to release this project.
@@ -68,13 +68,21 @@ In general, the default ports are 7777/8777/9777, and it is fine to leave them a
 Additional info:
 
 7.    Many server owners have encountered periods of lagginess since UBISoft shut down the master server list. This lag can be fixed in two ways: 1) use the DLL patcher created by Chris (available at rvsgaming.org) to modify your server's R6GameService.dll file, or 2) set your server to be a LAN server in the server.ini file by modifying the "InternetServer=" setting. The second is an experimental solution that is not tested or necessarily guaranteed to work.
+
 8.    Clients can connect to your server via the Join IP button if they know your server IP.  However, if you are running a server and would like it to appear in the server list fetched from rvsgaming.org, contact Tony (contact info available on smclan.org).
+
 9.    Your server’s banlist will now ban via IP.  Your old CD key bans are also kept.  You can manually add an IP to ban in the file Ravenshield/Server/BanList.ini.
+
 10.    You can also manually add a range of IPs to ban.  Simply enter an incomplete IP address, and any client joining with an IP that starts with this incomplete entry will be banned.  For example, an entry like this:
+
 Banned=105.10.
+
   would ban any client with an IP starting with “105.10.”, including IPs like “105.10.2.144” and “105.10.20.2”.  Be careful, because an entry like this:
+
 Banned=105.10
+
   without the period would ban any client with an IP starting with “105.10”, including IPs like “105.10.2.144” but also “105.107.2.144”.
+
 11.    OpenRVS is NOT officially supported in any way on Listen servers (aka non-dedicated servers).  I have heard that it will work but the clients joining may encounter bugs.
 
 # What exactly does the OpenRVS patch do?
