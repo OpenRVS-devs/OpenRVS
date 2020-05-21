@@ -1,6 +1,6 @@
 class OpenLogger;
 
-var config bool bDebugLoggingEnabled = False; // Set to True to enable debug logging in a debug build.
+var config bool bDebugLoggingEnabled;
 
 static function DebugLog(string s)
 {
@@ -8,4 +8,9 @@ static function DebugLog(string s)
     {
         log(s);
     }
+}
+
+defaultproperties
+{
+	bDebugLoggingEnabled=false // Set to true to enable debug logging globally.
 }
