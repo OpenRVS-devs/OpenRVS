@@ -1,6 +1,6 @@
 # OpenRVS
-A patch to fix Ubisoft's mistakes (intentional and otherwise)
-Allows multiplayer again, enables more serious modding, implements some QOL fixes
+A patch to fix Ubisoft's mistakes (intentional and otherwise).
+Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
 Including: CD key bypass, UBI.com ID bypass, server registration bypass, mod system fixes, new features, and multiple bugfixes and connection fixes
 Author: Twi
