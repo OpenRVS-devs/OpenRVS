@@ -93,7 +93,7 @@ function SetMenuMODS()
 		if ( CustomPC != none )
 		{
 			CustomPC.default.CheatClass = CheatClass;
-			//log(" OpenRVS experimental SP manager set for: " $ CustomPC);
+			class'OpenLogger'.static.DebugLog(" OpenRVS experimental SP manager set for: " $ CustomPC);
 			if ( FOV != 0 )
 			{
 				FOV = clamp(FOV,65,140);

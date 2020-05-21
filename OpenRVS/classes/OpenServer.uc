@@ -62,7 +62,7 @@ function Tick(float delta)
 				P.ClientKickedOut();
 				P.SpecialDestroy();
 				//debug:
-				//log(" **** TESTING **** PLAYER BANNED");
+				class'OpenLogger'.static.DebugLog(" **** TESTING **** PLAYER BANNED");
 			}
 		}
 		//1.2:
@@ -103,7 +103,7 @@ function bool HandleBans(R6PlayerController P)
 	//log the time of joining as well
 	log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is: " $ left(s,InStr(s,":")));
 	//debug:
-	//log(" **** TESTING **** PLAYER ID IS: " $ P.m_szGlobalID);
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** PLAYER ID IS: " $ P.m_szGlobalID);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
 		if ( Level.Game.AccessControl.Banned[i] ~= Left(P.m_szGlobalID,Len(Level.Game.AccessControl.Banned[i])) )
@@ -111,7 +111,7 @@ function bool HandleBans(R6PlayerController P)
 		i++;
 	}
 	//debug:
-	//log(" **** TESTING **** PLAYER NOT BANNED");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** PLAYER NOT BANNED");
 	return false;
 }
 

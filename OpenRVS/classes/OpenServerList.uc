@@ -30,7 +30,7 @@ var config array<AServer> ServerList;
 //if no URL, connects with the default server list at rvsgaming.org
 function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
 {
-	//log(" **** TESTING **** STARTING UP");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** STARTING UP");
 	M = Widget;
 	if ( W != "" )
 		WebAddress = W;
@@ -50,7 +50,7 @@ function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
 //when received a connection with server list host
 event Resolved(IpAddr Addr)
 {
-	//log(" **** TESTING **** RESOLVED");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** RESOLVED");
 	super.Resolved(Addr);
 	Addr.Port = 80;
 	Open(Addr);
@@ -58,7 +58,7 @@ event Resolved(IpAddr Addr)
 
 event ResolveFailed()
 {
-	//log(" **** TESTING **** RESOLVE FAILED");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** RESOLVE FAILED");
 	//M.NoServerList();//1.2
 	//1.3 noserverlist moved here
 	NoServerList();
@@ -69,7 +69,7 @@ event ResolveFailed()
 event Opened()
 {
 	super.Opened();
-	//log(" **** TESTING **** OPENED");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** OPENED");
 	SendText("GET /" $ FileName $ " HTTP/1.0" $ Chr(13) $ Chr(10) $ "Host: " $ WebAddress $ Chr(13) $ Chr(10) $ Chr(13) $ Chr(10));
 }
 
@@ -78,8 +78,8 @@ event ReceivedText(string Text)
 {
 	super.ReceivedText(Text);
 	buffer[buffer.length] = Text;
-	//log(" **** TESTING **** RECEIVED: " $ Text);//will crash if too large
-	//log(" **** TESTING **** END RECEIVED");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** RECEIVED: " $ Text);//will crash if too large
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** END RECEIVED");
 }
 
 //when connection is finished, check the length of each received line.
@@ -97,9 +97,9 @@ event Closed()
 	local array<string> list;//array to send to widget
 	local string s;//currently working with
 	local string l;//the LAST complete server info we found
-	//log(" **** TESTING **** CLOSED");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** CLOSED");
 	super.Closed();
-	//log(" **** TESTING **** lines received: " $ buffer.length);
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** lines received: " $ buffer.length);
 	//THE FOLLOWING:
 	//takes any data received from the web address
 	//and splits it into chunks smaller than or equal to 85 characters.
@@ -111,15 +111,15 @@ event Closed()
 	i = 0;
 	while ( i < buffer.length )
 	{
-		//log(" **** TESTING **** line " $ i+1 $ " length: " $ len(buffer[i]));
+		class'OpenLogger'.static.DebugLog(" **** TESTING **** line " $ i+1 $ " length: " $ len(buffer[i]));
 		while ( len(buffer[i]) > 85 )
 		{
-			//log(" **** TESTING **** moving 85 characters to next array element");
+			class'OpenLogger'.static.DebugLog(" **** TESTING **** moving 85 characters to next array element");
 			buffer.insert(i+1,1);
 			buffer[i+1] = right(buffer[i],85);
 			ReplaceText(buffer[i],buffer[i+1],"");//get rid of the text we moved to next array element
 		}
-		//log(" **** TESTING **** line " $ i $ ": " $ buffer[i]);
+		class'OpenLogger'.static.DebugLog(" **** TESTING **** line " $ i $ ": " $ buffer[i]);
 		i++;
 	}
 	//get rid of extraneous received data before the serverlist
@@ -127,7 +127,7 @@ event Closed()
 	s = buffer[0] $ buffer[1];
 	while ( InStr(s,"ServerName=") == -1 )
 	{
-		//log(" **** TESTING **** removing unneeded line: " $ buffer[0]);
+		class'OpenLogger'.static.DebugLog(" **** TESTING **** removing unneeded line: " $ buffer[0]);
 		buffer.Remove(0,1);
 		if ( buffer.length > 1 )
 			s = buffer[0] $ buffer[1];
@@ -145,7 +145,7 @@ event Closed()
 	i = 0;
 	while ( i < buffer.length )
 	{
-		//log(" **** TESTING **** current buffer: " $ buffer[i]);
+		class'OpenLogger'.static.DebugLog(" **** TESTING **** current buffer: " $ buffer[i]);
 		//fill our temp string with up to 3 buffer strings
 		k = 0;//how many buffer strings ahead to count
 		s = "";//temp string init
@@ -154,15 +154,15 @@ event Closed()
 			if ( k > 2 )
 				break;
 			s = s $ buffer[i+k];
-			//log(" **** TESTING **** current k: " $ k $ ", current temp string: " $ s);
+			class'OpenLogger'.static.DebugLog(" **** TESTING **** current k: " $ k $ ", current temp string: " $ s);
 			k++;
 		}
-		//log(" **** TESTING **** FINAL current temp string: " $ s);
+		class'OpenLogger'.static.DebugLog(" **** TESTING **** FINAL current temp string: " $ s);
 		//find the server name, eliminate any text before it
 		j = InStr(s,"ServerName=");
 		if ( j == -1 )//could not find another entry
 		{
-			//log(" **** TESTING **** DONE PARSING");
+			class'OpenLogger'.static.DebugLog(" **** TESTING **** DONE PARSING");
 			//PARSING DONE!
 			if ( List.length > 0 )
 			{
@@ -194,11 +194,11 @@ event Closed()
 		{
 			l = s;//last server added update
 			List[List.length] = s;//add server to list to send
-			//log(" **** TESTING **** SERVER FOUND: " $ s);
+			class'OpenLogger'.static.DebugLog(" **** TESTING **** SERVER FOUND: " $ s);
 		}
 		i++;
 	}
-	//log(" **** TESTING **** DONE PARSING");
+	class'OpenLogger'.static.DebugLog(" **** TESTING **** DONE PARSING");
 	//PARSING DONE!
 	if ( List.length > 0 )
 	{
