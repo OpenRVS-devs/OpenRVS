@@ -38,7 +38,7 @@ function Tick(float delta)
 	{
 		P = R6PlayerController(C);
 		//doesn't have valid cd key
-		if ( P != none ) && ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID )
+		if ( ( P != none ) && ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID ) )
 		{
 			if ( !bLogged )
 			{
@@ -61,7 +61,6 @@ function Tick(float delta)
 				P.ClientMessage("Your IP address is banned on this server");
 				P.ClientKickedOut();
 				P.SpecialDestroy();
-				//debug:
 				class'OpenLogger'.static.DebugLog("PLAYER BANNED");
 			}
 		}
@@ -72,7 +71,7 @@ function Tick(float delta)
 		//but lag for high-ping players always meant that the enemy would "pop" in
 		//this fix requires marginally more bandwidth but forces the server to replicate all alive pawns at all times
 		Pawn = C.Pawn;
-		if ( Pawn != none ) && ( Pawn.IsAlive() ) && ( !Pawn.bAlwaysRelevant )
+		if ( ( Pawn != none ) && ( Pawn.IsAlive() ) && ( !Pawn.bAlwaysRelevant ) )
 		{
 			Pawn.bAlwaysRelevant = true;
 		}
@@ -102,7 +101,6 @@ function bool HandleBans(R6PlayerController P)
 	//TO DO:
 	//log the time of joining as well
 	log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is: " $ left(s,InStr(s,":")));
-	//debug:
 	class'OpenLogger'.static.DebugLog("PLAYER ID IS: " $ P.m_szGlobalID);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
@@ -110,7 +108,6 @@ function bool HandleBans(R6PlayerController P)
 			return true;
 		i++;
 	}
-	//debug:
 	class'OpenLogger'.static.DebugLog("PLAYER NOT BANNED");
 	return false;
 }

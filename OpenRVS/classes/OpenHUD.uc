@@ -28,7 +28,7 @@ simulated event RenderFirstPersonGun(Canvas C)
 		if ( ( P != none ) && ( PC != none ) && ( R6Weapons(P.EngineWeapon) != none ) )
 		{
 			W = R6Weapons(P.EngineWeapon);
-			if ( DebugFPWeapRender != 0.0 ) && ( !Level.m_bInGamePlanningActive ) &&( PC.m_bUseFirstPersonWeapon ) && ( W.m_FPHands != none )
+			if ( ( DebugFPWeapRender != 0.0 ) && ( !Level.m_bInGamePlanningActive ) && ( PC.m_bUseFirstPersonWeapon ) && ( W.m_FPHands != none ) )
 			{
 				W.m_FPHands.SetLocation(P.R6CalcDrawLocation(P.EngineWeapon,rNewRotation,P.EngineWeapon.m_vPositionOffset));
 				W.m_FPHands.SetRotation(P.GetViewRotation() + rNewRotation + PC.m_rHitRotation);

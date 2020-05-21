@@ -291,7 +291,6 @@ function JoinSelectedServerRequested()
 		//m_szServerIP = Left(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,InStr(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,":"));
 		//get the server beacon port = server port + 1000
 		//iBeaconPort = int(Mid(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,InStr(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,":")+1))+1000;
-		//DEBUG:
 		class'OpenLogger'.static.DebugLog("WANTS TO JOIN IP: " $ m_szServerIP);
 		class'OpenLogger'.static.DebugLog("WANTS TO QUERY PORT: " $ iBeaconPort);
 		//m_pQueryServerInfo.StartQueryServerInfoProcedure(OwnerWindow,m_szServerIP,iBeaconPort);
@@ -429,8 +428,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 {
 	local R6WindowListServerItem CurServer;
 	local int i;
-	//debug:
-	class'OpenLogger'.static.DebugLog("Server " $ sSvrName $ " at " $ sIP $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
+	class'OpenLogger'.static.DebugLog("Server " $ sSvrName $ " at " $ sIP $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ iNumP $ "/" $ iMaxP);
 	//0.8
 	//find the server in the list that we received info for, and update
 	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
@@ -444,7 +442,6 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			CurServer.szGameType = GetLevel().GetGameNameLocalization(sGMode);
 			CurServer.szMap = sMapName;
 			//1.3 - grey out version if not the right mod
-			//debug
 			class'OpenLogger'.static.DebugLog(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord@sModName);
 			if ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) )
 				CurServer.bSameVersion = false;
@@ -481,7 +478,6 @@ defaultproperties
 {
 	ServerURL="gsconnect.rvsgaming.org"
 	ServerListURL="servers-updated.list"
-	//debug:
 	//ServerList(0)=(ServerName="SMC Mod Testing",IP="185.24.221.23:7777",MaxPlayers=4,Locked=true,GameMode="coop")
 	//ServerList(1)=(ServerName="ShadowSquadHQ Adver",IP="198.23.145.10:7778",MaxPlayers=16,Locked=false,GameMode="Adver")
 }

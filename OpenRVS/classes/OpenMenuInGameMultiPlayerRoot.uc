@@ -42,7 +42,7 @@ function ChangeCurrentWidget( eGameWidgetID widgetID )
 //force new FOV so we don't start first round with
 function Paint(Canvas C,float X,float Y)
 {
-	if ( FOV != 0 ) && ( GetPlayerOwner() != none ) && ( R6PlayerController(GetPlayerOwner()) != none )
+	if ( ( FOV != 0 ) && ( GetPlayerOwner() != none ) && ( R6PlayerController(GetPlayerOwner()) != none ) )
 	{
 		if ( R6PlayerController(GetPlayerOwner()).default.DefaultFOV != FOV )
 		{

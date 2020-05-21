@@ -6,10 +6,20 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 
 ## Building
 
-1. compile in 1.60
-2. strip
-3. clean
-4. convert
+**Note: You must test your changes using this process BEFORE opening a pull request!**
+
+First, you will need to download [Twi's Raven Shield SDK](https://www.moddb.com/mods/raven-shield-software-development-kit). Put this somewhere convenient (such as `C:\rvssdk`).
+
+The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories) to be inside the `Code Environment` directory in the SDK folder. Be sure to copy `PATH\TO\GIT\REPO\{OpenRVS,OpenRenderFix}` to `PATH\TO\SDK\Code Environment` to operate on the latest version of your code.
+
+1. Open a command prompt in the `SDK2` directory.
+1. Run `"SDK ToolBelt.bat"` to enter the CLI
+1. Run `160` to activate the SDK for Raven Shield v1.60
+1. Type `compile` to enter the compiler, and then type `OpenRVS` to compile OpenRVS. Address any errors or warnings if necessary. Type `log` to show more detail
+1. Type `strip` to enter the symbol/docstring stripper, and then type `OpenRVS` to run it
+1. Copy `OpenRVS.u` and/or `OpenRenderFix.u` to your game directory's `system` folder
+
+Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to the renderer.
 
 ## To Do
 

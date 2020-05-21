@@ -1,18 +1,14 @@
-class OpenLogger extends Object config(openrvs);
+class OpenLogger extends Object;
 
 var config bool bDebugLoggingEnabled;
 
 // DebugLog write a message to stdout prefixed with ***DEBUG***.
-// Set bDebugLogginEnabled=true in openrvs.ini to enable.
 static function DebugLog(string s)
 {
-	if (bDebugLoggingEnabled)
+	if (false) // Set to true to enable debug logging globally.
 	{
-		log(s, "***DEBUG***");
+        // log() can accept a tag as a second parameter, e.g. `log(s, 'DEBUG');`, but
+        // the tag does not support non-alphanumeric characters such as `*` or `[]`.
+		log("***DEBUG***" @ s);
 	}
-}
-
-defaultproperties
-{
-	bDebugLoggingEnabled=false // Set to true to enable debug logging globally.
 }
