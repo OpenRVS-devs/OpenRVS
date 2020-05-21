@@ -1,13 +1,9 @@
 # OpenRVS
-A patch to fix Ubisoft's mistakes (intentional and otherwise).
-
-Allows multiplayer again, enables more serious modding, implements some QOL fixes.
-
-Including: CD key bypass, UBI.com ID bypass, server registration bypass, mod system fixes, new features, and multiple bugfixes and connection fixes
-
 Author: Twi
 
-Thanks to: Tony, Psycho, Legacy, juguLator01, SMC and ShadowSquad clans, and the AllR6 community
+A patch to fix Ubisoft's mistakes (intentional and otherwise).  Allows multiplayer again, enables more serious modding, implements some QOL fixes.
+
+Including: CD key bypass, UBI.com ID bypass, server registration bypass, mod system fixes, new features, and multiple bugfixes and connection fixes.  Thanks to: Tony, Psycho, Legacy, juguLator01, SMC and ShadowSquad clans, and the AllR6 community
 
 # DISCLAIMER:
 OpenRVS is a private project, made in response to UBISoft's choice to cease validation of cd keys for the game Rainbow Six 3: Raven Shield.  Although Raven Shield players have legally purchased the game, service for these players has now ceased.  Because UBISoft had shut down all support for online Raven Shield (as of September 24, 2016), I have decided to release this project.
@@ -20,6 +16,7 @@ Server owners should copy OpenRVS.u and R6ClassDefines.ini to their System folde
 
 # How to install fresh on your personal Ravenshield copy:
 1.    Stop your game if it’s running.  Copy the supplied files OpenRVS.u, R6ClassDefines.ini, openrvs.ini, and Servers.list to your game’s Ravenshield/System directory.
+
 2.    Play the game!
 
 Additional Info:
@@ -34,25 +31,42 @@ Additional Info:
 
 # How to install on your server:
 1.    Stop your server if it’s running.  Copy the file OpenRVS.u to your server’s Ravenshield/System directory.
+
 2.    Open your server’s Ravenshield/Mods/Ravenshield.mod file in a text editor.  Scroll to the bottom and add this line:
 ServerActors=OpenRVS.OpenServer
+
 3.    *Important: if you have N4Admin installed on your server, skip this step!*  Still in Ravenshield.mod, find the line
+
 ServerActors=IpDrv.UdpBeacon
-  Change it to say:
+
+Change it to say:
+
 ServerActors=OpenRVS.OpenBeacon
+
 4.    Optional: Still in Ravenshield.mod, copy and paste the following lines at the bottom of the file:
+
 ServerPackages=OpenRenderFix
+
 ServerActors=OpenRenderFix.OpenFix
-  Then copy the file OpenRenderFix.utx to your server's Textures folder. This will ensure that clients with widescreen displays and a high field of view will render the first person gun correctly.
+
+Then copy the file OpenRenderFix.utx to your server's Textures folder. This will ensure that clients with widescreen displays and a high field of view will render the first person gun correctly.
+
 5.    *Important: make sure your server’s ports are set correctly!* In your server’s Ravenshield/System/Ravenshield.ini file, double check your server’s port number.  Ensure that your server’s ServerBeaconPort entry is the server’s port plus 1000, and your server’s BeaconPort is the server’s port plus 2000.  So for example, if your port is this:
+
 Port=7779
-  Then the ServerBeaconPort and BeaconPort entries should look like this:
+
+Then the ServerBeaconPort and BeaconPort entries should look like this:
+
 ServerBeaconPort=8779
+
 BeaconPort=9779
-  In general, the default ports are 7777/8777/9777, and it is fine to leave them at this.
+
+In general, the default ports are 7777/8777/9777, and it is fine to leave them at this.
+
 6.    Start your server!
 
 Additional info:
+
 7.    Many server owners have encountered periods of lagginess since UBISoft shut down the master server list. This lag can be fixed in two ways: 1) use the DLL patcher created by Chris (available at rvsgaming.org) to modify your server's R6GameService.dll file, or 2) set your server to be a LAN server in the server.ini file by modifying the "InternetServer=" setting. The second is an experimental solution that is not tested or necessarily guaranteed to work.
 8.    Clients can connect to your server via the Join IP button if they know your server IP.  However, if you are running a server and would like it to appear in the server list fetched from rvsgaming.org, contact Tony (contact info available on smclan.org).
 9.    Your server’s banlist will now ban via IP.  Your old CD key bans are also kept.  You can manually add an IP to ban in the file Ravenshield/Server/BanList.ini.
