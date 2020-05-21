@@ -32,7 +32,7 @@ var bool bServerSuccess;//got list of servers from online provider
 function QueryReceivedStartPreJoin ()
 {
 	local bool bRoomValid;
-	class'OpenLogger'.static.DebugLog(" **** TESTING **** QUERYRECEIVEDSTARTPREJOIN");
+	class'OpenLogger'.static.DebugLog("QUERYRECEIVEDSTARTPREJOIN");
 	bRoomValid = false;//( m_GameService.m_ClientBeacon.PreJoinInfo.iLobbyID != 0 ) && ( m_GameService.m_ClientBeacon.PreJoinInfo.iGroupID != 0 );
 	//if ( ( m_ConnectionTab == TAB_Internet_Server ) && !bRoomValid )//setting the above will make this error never occur
 	//{
@@ -42,12 +42,12 @@ function QueryReceivedStartPreJoin ()
 	//}
 	if ( bRoomValid )//eJoinRoomChoice - make this always happen? or set always false?	Hangs and doesn't join when set always true
 	{
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** VALID ROOM FAKED! STARTING CD KEY PROCESS");
+		class'OpenLogger'.static.DebugLog("VALID ROOM FAKED! STARTING CD KEY PROCESS");
 		R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_BY_LOBBY_AND_ROOM_ID,m_GameService.m_ClientBeacon.PreJoinInfo);
 	}
 	else//seems to be best to just set to false and default to this process
 	{
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** INVALID ROOM - starting cd key process with EJRC_NO");
+		class'OpenLogger'.static.DebugLog("INVALID ROOM - starting cd key process with EJRC_NO");
 		R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_NO,m_GameService.m_ClientBeacon.PreJoinInfo);
 	}
 }
@@ -108,21 +108,21 @@ function ServerListSuccess(string sn,string sip,bool sl,string sm)
 		//get server name
 		j = InStr(List[i],",");
 		ServerList[i].ServerName = Mid(List[i],0,j-1);
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** " $ ServerList[i].ServerName);
+		class'OpenLogger'.static.DebugLog("" $ ServerList[i].ServerName);
 		List[i] = Mid(List[i],j+5);//get rid of server name and ,IP="
 		//get server IP
 		j = InStr(List[i],",");
 		ServerList[i].IP = Mid(List[i],0,j-1);
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** " $ ServerList[i].IP);
+		class'OpenLogger'.static.DebugLog("" $ ServerList[i].IP);
 		List[i] = Mid(List[i],j+8);//get rid of IP and ,Locked=
 		//get locked
 		j = InStr(List[i],",");
 		ServerList[i].Locked = bool(Mid(List[i],0,j-1));
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** " $ ServerList[i].Locked);
+		class'OpenLogger'.static.DebugLog("" $ ServerList[i].Locked);
 		List[i] = Mid(List[i],j+11);//get rid of locked and ,GameMode="
 		//get coop
 		ServerList[i].GameMode = List[i];
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** " $ ServerList[i].GameMode);
+		class'OpenLogger'.static.DebugLog("" $ ServerList[i].GameMode);
 		i++;
 	}
 	bServerSuccess = true;
@@ -169,7 +169,7 @@ function GetGSServers()
 	InitServerList();//needed here to prevent big accessed nones!
 	console = R6Console(Root.Console);
 	pLevel	= GetLevel();
-	class'OpenLogger'.static.DebugLog(" **** TESTING **** CONSOLE: " $ console $ " LEVEL: " $ pLevel $ " LISTBOX: " $ m_ServerListBox);
+	class'OpenLogger'.static.DebugLog("CONSOLE: " $ console $ " LEVEL: " $ pLevel $ " LISTBOX: " $ m_ServerListBox);
 
 	// Remember IP of selected server, we sill keep this server highlighted
 	// in the list if it is still there after the list has been rebuilt.
@@ -179,7 +179,7 @@ function GetGSServers()
 	else
 		szSelSvrIP = "";
 
-	class'OpenLogger'.static.DebugLog(" **** TESTING **** CLEARING");
+	class'OpenLogger'.static.DebugLog("CLEARING");
 	m_ServerListBox.ClearListOfItems();	// Clear current list of servers
 	m_ServerListBox.m_SelectedItem = none;
 
@@ -210,36 +210,36 @@ function GetGSServers()
 	i = 0;
 	while ( i < ServerList.length )
 	{
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** STARTING SERVER LIST ITEM");
+		class'OpenLogger'.static.DebugLog("STARTING SERVER LIST ITEM");
 		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(i,NewItem));
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
 		NewItem.bFavorite = true;
 		NewItem.bSameVersion = true;
 		NewItem.szIPAddr = ServerList[i].IP;
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** IP: " $ NewItem.szIPAddr);
+		class'OpenLogger'.static.DebugLog("IP: " $ NewItem.szIPAddr);
 		//if ( m_GameService.CallNativeProcessIcmpPing(NewItem.szIPAddr,tPing) )//can't seem to query ping with this function?
 			//NewItem.iPing = tPing;
 		//else
 		NewItem.iPing = 1000;//was 1000 in early versions, at some point post 0.6 was changed to 9000?
 		NewItem.szName = ServerList[i].ServerName;
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** NAME: " $ NewItem.szName);
+		class'OpenLogger'.static.DebugLog("NAME: " $ NewItem.szName);
 		NewItem.szMap = "";
 		NewItem.iMaxPlayers = 0;
 		NewItem.iNumPlayers = 0;
 		NewItem.bLocked = ServerList[i].Locked;
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** LOCKED: " $ NewItem.bLocked);
+		class'OpenLogger'.static.DebugLog("LOCKED: " $ NewItem.bLocked);
 		NewItem.bDedicated = true;
 		NewItem.bPunkBuster = false;
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** MAP NAME LOC");
+		class'OpenLogger'.static.DebugLog("MAP NAME LOC");
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** GAME TYPE LOC");
+		class'OpenLogger'.static.DebugLog("GAME TYPE LOC");
 		NewItem.szGameType = "";
 		if ( InStr(caps(ServerList[i].GameMode),"ADV") != -1 )
 			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
 		else
 			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** MODE: " $ NewItem.szGameMode);
+		class'OpenLogger'.static.DebugLog("MODE: " $ NewItem.szGameMode);
 		// If selected server is still in list, reset this item
 		// to be the selcted server.	By default the selected server will
 		// be the first server in the list.
@@ -255,9 +255,9 @@ function GetGSServers()
 
 		bFirstSvr = false;
 		i++;
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** FINISHED SERVER LIST ITEM");
+		class'OpenLogger'.static.DebugLog("FINISHED SERVER LIST ITEM");
 	}
-	class'OpenLogger'.static.DebugLog(" **** TESTING **** DONE");
+	class'OpenLogger'.static.DebugLog("DONE");
 	ManageToolTip("",true);
 	QueryForServerInfo();//0.8
 }
@@ -292,14 +292,14 @@ function JoinSelectedServerRequested()
 		//get the server beacon port = server port + 1000
 		//iBeaconPort = int(Mid(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,InStr(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,":")+1))+1000;
 		//DEBUG:
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** WANTS TO JOIN IP: " $ m_szServerIP);
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** WANTS TO QUERY PORT: " $ iBeaconPort);
+		class'OpenLogger'.static.DebugLog("WANTS TO JOIN IP: " $ m_szServerIP);
+		class'OpenLogger'.static.DebugLog("WANTS TO QUERY PORT: " $ iBeaconPort);
 		//m_pQueryServerInfo.StartQueryServerInfoProcedure(OwnerWindow,m_szServerIP,iBeaconPort);
 		//m_bQueryServerInfoInProgress = true;
 		//originally, UBI stripped out port information
 		//to fix, try to get IP address with port included
 		//m_szServerIP = R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr;
-		class'OpenLogger'.static.DebugLog(" **** TESTING **** ORIGINAL SERVER PORT INFO: " $ m_szServerIP);
+		class'OpenLogger'.static.DebugLog("ORIGINAL SERVER PORT INFO: " $ m_szServerIP);
 	}
 	else
 		super.JoinSelectedServerRequested();
@@ -430,7 +430,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 	local R6WindowListServerItem CurServer;
 	local int i;
 	//debug:
-	class'OpenLogger'.static.DebugLog("** Server " $ sSvrName $ " at " $ sIP $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
+	class'OpenLogger'.static.DebugLog("Server " $ sSvrName $ " at " $ sIP $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
 	//0.8
 	//find the server in the list that we received info for, and update
 	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
@@ -445,7 +445,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			CurServer.szMap = sMapName;
 			//1.3 - grey out version if not the right mod
 			//debug
-			class'OpenLogger'.static.DebugLog("*****"@class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord@sModName);
+			class'OpenLogger'.static.DebugLog(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord@sModName);
 			if ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) )
 				CurServer.bSameVersion = false;
 			else

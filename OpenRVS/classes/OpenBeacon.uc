@@ -12,7 +12,7 @@ event ReceivedText(IpAddr Addr,string Text)
 	local R6ServerInfo pServerOptions;
 	local BOOL bServerResistered;
 	pServerOptions = class'Actor'.static.GetServerOptions();
-	class'OpenLogger'.static.DebugLog(" **** TESTING **** RECEVED TEXT " $ Text);
+	class'OpenLogger'.static.DebugLog("OpenBeacon received text: " $ Text);
 	if( Text == "REPORT" )
 		BroadcastBeacon(Addr);
 	if( Text == "REPORTQUERY" )

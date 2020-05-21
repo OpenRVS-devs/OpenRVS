@@ -1,4 +1,4 @@
-class OpenLogger;
+class OpenLogger extends Object config(openrvs);
 
 var config bool bDebugLoggingEnabled;
 
@@ -6,7 +6,7 @@ static function DebugLog(string s)
 {
 	if (bDebugLoggingEnabled)
 	{
-		log(s);
+		log("***DEBUG***" @ s);
 	}
 }
 

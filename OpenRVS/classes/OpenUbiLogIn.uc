@@ -13,5 +13,5 @@ function ProcessGSMsg (string _szMsg)
 	HideWindow();
 	m_GameService.SaveConfig();
 	m_pSendMessageDest.SendMessage(MWM_UBI_LOGIN_SUCCESS);
-	class'OpenLogger'.static.DebugLog(" **** TESTING **** SUCCESSFULLY FAKED UBI LOGIN");
+	class'OpenLogger'.static.DebugLog("SUCCESSFULLY FAKED UBI LOGIN");
 }
