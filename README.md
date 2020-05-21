@@ -4,7 +4,7 @@ Author: Twi
 
 A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
-## Building
+## Local Development
 
 **Note: You must test your changes using this process BEFORE opening a pull request!**
 
@@ -21,6 +21,8 @@ The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories
 1. Test your changes in-game by connecting to the server
 
 Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to the renderer.
+
+In order to enable debug logging, edit `OpenLogger.uc` and change `false` to `true` where instructed.
 
 ## To Do
 
