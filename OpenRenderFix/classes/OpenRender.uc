@@ -28,32 +28,25 @@ simulated event RenderFirstPersonGun(Canvas C)
 		if ( ( P != none ) && ( PC != none ) && ( R6Weapons(P.EngineWeapon) != none ) )//have a pawn and a gun
 		{
 			W = R6Weapons(P.EngineWeapon);
-			if ( DebugFPWeapRender != 0.0 )//0 is inactive - render at world FOV
+
+			//0 is inactive - render at world FOV
+			if ( DebugFPWeapRender != 0.0 ) && ( !Level.m_bInGamePlanningActive ) && ( PC.m_bUseFirstPersonWeapon ) && ( W.m_FPHands != none )
 			{
-				if ( !Level.m_bInGamePlanningActive )
+				//do the fp position calculation
+				W.m_FPHands.SetLocation(P.R6CalcDrawLocation(P.EngineWeapon,rNewRotation,P.EngineWeapon.m_vPositionOffset));
+				W.m_FPHands.SetRotation(P.GetViewRotation() + rNewRotation + PC.m_rHitRotation);
+				if ( PC.ShouldDrawWeapon() )
 				{
-					if ( PC.m_bUseFirstPersonWeapon )
-					{
-						if ( W.m_FPHands != none )
-						{
-							//do the fp position calculation
-							W.m_FPHands.SetLocation(P.R6CalcDrawLocation(P.EngineWeapon,rNewRotation,P.EngineWeapon.m_vPositionOffset));
-							W.m_FPHands.SetRotation(P.GetViewRotation() + rNewRotation + PC.m_rHitRotation);
-							if ( PC.ShouldDrawWeapon() )
-							{
-								//IF DEBUGFPWEAPRENDER IS NEGATIVE
-								//then the gun fov will be modified by the zoom level
-								//this is default behaviour and what we want
-								//ELSE
-								//it will always render at a static fov
-								if ( DebugFPWeapRender < -0.0 )//render at DebugFPWeapRender (modified by zoom)
-									g = ( PlayerOwner.DefaultFOV * DebugFPWeapRender * -1 ) / PlayerOwner.default.DesiredFOV;
-								else//render at DebugFPWeapRender (not modified)
-									g = DebugFPWeapRender;
-								C.DrawActor(W.m_FPHands,false,true,g);//call DrawActor() with the fov as an argument
-							}
-						}
-					}
+					//IF DEBUGFPWEAPRENDER IS NEGATIVE
+					//then the gun fov will be modified by the zoom level
+					//this is default behaviour and what we want
+					//ELSE
+					//it will always render at a static fov
+					if ( DebugFPWeapRender < -0.0 )
+						g = ( PlayerOwner.DefaultFOV * DebugFPWeapRender * -1 ) / PlayerOwner.default.DesiredFOV;//render at DebugFPWeapRender (modified by zoom)
+					else
+						g = DebugFPWeapRender;//render at DebugFPWeapRender (not modified)
+					C.DrawActor(W.m_FPHands,false,true,g);//call DrawActor() with the fov as an argument
 				}
 			}
 			else

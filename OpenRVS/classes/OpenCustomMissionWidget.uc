@@ -204,7 +204,7 @@ function RefreshList()
 		if ( !mission.m_bCampaignMission && mission.IsAvailableInGameType( szGameType ) && mission.m_MapName != "" )
 		{
 			szMapName = Localize( mission.m_MapName, "ID_MENUNAME", mission.LocalizationFile, true );
-			if ( szMapName == ""  ) // failed to find the name, copy the map map (usefull for debugging)
+			if ( szMapName == "" ) // failed to find the name, copy the map map (usefull for debugging)
 			{
 				szMapName = mission.m_MapName;
 			}
@@ -334,9 +334,9 @@ function Notify(UWindowDialogControl C, byte E)
 	}
 	else if (E == DE_DoubleClick)
 	{
-		if (C == m_GameLevelBox) // start a game on a double-click on the list
+		// start a game on a double-click on the list
+		if (C == m_GameLevelBox) && ( ValidateBeforePlanning() )
 		{
-			if( ValidateBeforePlanning() )
 				GotoPlanning();	
 		}
 	}

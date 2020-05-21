@@ -93,34 +93,32 @@ function Tick(float delta)
 	while ( C != none )
 	{
 		P = R6PlayerController(C);
-		if ( P != none )
+		//doesn't have valid cd key
+		if ( P != none ) && if ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID )
 		{
-			if ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID )//doesn't have valid cd key
+			if ( !bLogged )
 			{
-				if ( !bLogged )
-				{
-					log("	 ---- OpenRVS ----");
-					log("	 Current Status:  Validating players");
-					bLogged = true;
-				}
-				//THE IMPORTANT STUFF
-				//Set each client to have a validated cd key request object
-				//Before the server gets around to checking them
-				P.m_stPlayerVerCDKeyStatus.m_eCDKeyRequest = ECDKEY_NONE;
-				P.m_stPlayerVerCDKeyStatus.m_szAuthorizationID = string(rand(1000000000));
-				P.m_stPlayerVerCDKeyStatus.m_iCDKeyReqID = 1;
-				P.m_stPlayerVerCDKeyStatus.m_bCDKeyValSecondTry = false;
-				P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus = ECDKEYST_PLAYER_VALID;
-				if ( HandleBans(P) )//PLAYER IS BANNED VIA IP ADDRESS
-				{
-					log("	 ---- OpenRVS ----");
-					log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address");
-					P.ClientMessage("Your IP address is banned on this server");
-					P.ClientKickedOut();
-					P.SpecialDestroy();
-					//debug:
-//					log(" **** TESTING **** PLAYER BANNED");
-				}
+				log("	 ---- OpenRVS ----");
+				log("	 Current Status:  Validating players");
+				bLogged = true;
+			}
+			//THE IMPORTANT STUFF
+			//Set each client to have a validated cd key request object
+			//Before the server gets around to checking them
+			P.m_stPlayerVerCDKeyStatus.m_eCDKeyRequest = ECDKEY_NONE;
+			P.m_stPlayerVerCDKeyStatus.m_szAuthorizationID = string(rand(1000000000));
+			P.m_stPlayerVerCDKeyStatus.m_iCDKeyReqID = 1;
+			P.m_stPlayerVerCDKeyStatus.m_bCDKeyValSecondTry = false;
+			P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus = ECDKEYST_PLAYER_VALID;
+			if ( HandleBans(P) )//PLAYER IS BANNED VIA IP ADDRESS
+			{
+				log("	 ---- OpenRVS ----");
+				log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address");
+				P.ClientMessage("Your IP address is banned on this server");
+				P.ClientKickedOut();
+				P.SpecialDestroy();
+				//debug:
+				//log(" **** TESTING **** PLAYER BANNED");
 			}
 		}
 		//1.2:
@@ -130,13 +128,9 @@ function Tick(float delta)
 		//but lag for high-ping players always meant that the enemy would "pop" in
 		//this fix requires marginally more bandwidth but forces the server to replicate all alive pawns at all times
 		Pawn = C.Pawn;
-		if ( Pawn != none )
+		if ( Pawn != none ) && if ( Pawn.IsAlive() ) && ( !Pawn.bAlwaysRelevant )
 		{
-			if ( Pawn.IsAlive() )
-			{
-				if ( !Pawn.bAlwaysRelevant )
-					Pawn.bAlwaysRelevant = true;
-			}
+			Pawn.bAlwaysRelevant = true;
 		}
 		C = C.NextController;
 	}
@@ -165,7 +159,7 @@ function bool HandleBans(R6PlayerController P)
 	//log the time of joining as well
 	log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is: " $ left(s,InStr(s,":")));
 	//debug:
-//	log(" **** TESTING **** PLAYER ID IS: " $ P.m_szGlobalID);
+	//log(" **** TESTING **** PLAYER ID IS: " $ P.m_szGlobalID);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
 		if ( Level.Game.AccessControl.Banned[i] ~= Left(P.m_szGlobalID,Len(Level.Game.AccessControl.Banned[i])) )
@@ -173,7 +167,7 @@ function bool HandleBans(R6PlayerController P)
 		i++;
 	}
 	//debug:
-//	log(" **** TESTING **** PLAYER NOT BANNED");
+	//log(" **** TESTING **** PLAYER NOT BANNED");
 	return false;
 }
 

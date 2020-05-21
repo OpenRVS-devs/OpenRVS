@@ -12,7 +12,7 @@ event ReceivedText(IpAddr Addr,string Text)
 	local R6ServerInfo pServerOptions;
 	local BOOL bServerResistered;
 	pServerOptions = class'Actor'.static.GetServerOptions();
-//	log(" **** TESTING **** RECEVED TEXT " $ Text);
+	//log(" **** TESTING **** RECEVED TEXT " $ Text);
 	if( Text == "REPORT" )
 		BroadcastBeacon(Addr);
 	if( Text == "REPORTQUERY" )

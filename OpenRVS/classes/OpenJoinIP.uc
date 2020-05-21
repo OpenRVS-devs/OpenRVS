@@ -18,7 +18,7 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 	{
 		if ( _ePopUpID == EPopUpID_EnterIP )
 		{
-//debug			log("**************** DEBUG: popupboxdone() enterIP");
+			//log("**************** DEBUG: popupboxdone() enterIP");
 			m_szIP = R6WindowEditBox(m_pEnterIP.m_ClientArea).GetValue();
 			
 			//THIS IS UBI'S ORIGINAL LINE:
@@ -31,27 +31,27 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 			//because when ClientBeaconReceiver sees port 0, it just assumes the default port
 			
 			//here's the new version:
-//debug			log("**************** DEBUG: finding correct port number");
+			//log("**************** DEBUG: finding correct port number");
 			if ( InStr(m_szIP,":") != -1 )//find if a port number included
 				m_iPort = int(Mid(m_szIP,InStr(m_szIP,":")+1))+1000;//get the port number (port to question is default +1000)
 			else
 				m_iPort = 0;//no port included, use the default port
-//debug			log("**************** DEBUG: checking prejoinquery");
+			//log("**************** DEBUG: checking prejoinquery");
 			if ( !m_GameService.m_ClientBeacon.PreJoinQuery(m_szIP,m_iPort) )
 			{
 				// handle invalid ip string format here
-//debug				log("**************** DEBUG: wrong IP string");
+				//log("**************** DEBUG: wrong IP string");
 				PopUpBoxDone(MR_OK,EPopUpID_JoinIPError);
 				log("Invalid IP string entered");
 			}
 			else
 			{
-//debug				log("**************** DEBUG: starting the connection");
+				//log("**************** DEBUG: starting the connection");
 				if ( !m_bStartByCmdLine )
 					m_pPleaseWait.ShowWindow();
 				m_fBeaconTime =  m_GameService.NativeGetSeconds();
 				eState = EJOINIP_WAITING_FOR_BEACON;
-//debug				log("**************** DEBUG: state is waiting for beacon");
+				//log("**************** DEBUG: state is waiting for beacon");
 			}
 		}
 		else
@@ -78,16 +78,16 @@ function Manager( UWindowWindow _pCurrentWidget )
 		 break;
 
 	  case EJOINIP_WAITING_FOR_BEACON:
-//	  		log(" **** TESTING **** WAITING FOR BEACON");
+		 //log(" **** TESTING **** WAITING FOR BEACON");
 		 // Response has been received from the server
 		 if ( m_GameService.m_ClientBeacon.PreJoinInfo.bResponseRcvd )
 		 {
-//			 log(" **** TESTING **** RECEIVED A RESPONSE");
-//			  log(" **** TESTING **** INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer);
+			//log(" **** TESTING **** RECEIVED A RESPONSE");
+			//log(" **** TESTING **** INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer);
 			// Verify that the server is the same version as the game
 			if ( Root.Console.ViewportOwner.Actor.GetGameVersion() != m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion )
 			{
-//				 log(" **** TESTING **** VERSION FAIL");
+			   //log(" **** TESTING **** VERSION FAIL");
 			   eState = EJOINIP_BEACON_FAIL;
 			   m_pPleaseWait.HideWindow();
 			   m_pError.ShowWindow();
@@ -95,7 +95,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 			}
 			else if ( R6Console(Root.console).m_bNonUbiMatchMaking )
 			{
-//				 log(" **** TESTING **** NON UBI MATCHMAKING");
+			   //log(" **** TESTING **** NON UBI MATCHMAKING");
 			   _pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
 			   if (!m_bStartByCmdLine)
 				  HideWindow();
@@ -104,20 +104,20 @@ function Manager( UWindowWindow _pCurrentWidget )
 			//BYPASSED!
 			//allow any server, even LAN, to be joined via IP
 			//however, seems to not work?  Maybe experience crashes
-//			else if ( !m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer )
-//			{
-//			   eState = EJOINIP_BEACON_FAIL;
-//			   m_pPleaseWait.HideWindow();
-//			   m_pError.ShowWindow();
-//			   R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_LanServer","R6Menu");
-//			}
+			//else if ( !m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer )
+			//{
+			//   eState = EJOINIP_BEACON_FAIL;
+			//   m_pPleaseWait.HideWindow();
+			//   m_pError.ShowWindow();
+			//   R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_LanServer","R6Menu");
+			//}
 			else
 			{
 				//set to always false? seems to prevent hang when joining my personal server
 			   m_bRoomValid = false;//( m_GameService.m_ClientBeacon.PreJoinInfo.iLobbyID != 0 && m_GameService.m_ClientBeacon.PreJoinInfo.iGroupID != 0 );
 			   _pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
-//			    log(" **** TESTING **** SUCCESS");
-//			     log(" **** TESTING **** ROOM VALID: " $ m_bRoomValid);
+			   //log(" **** TESTING **** SUCCESS");
+			   //log(" **** TESTING **** ROOM VALID: " $ m_bRoomValid);
 			   HideWindow();
 			}
 		 }
@@ -127,7 +127,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 			elapsedTime = m_GameService.NativeGetSeconds() - m_fBeaconTime;
 			if ( elapsedTime > K_MAX_TIME_BEACON )
 			{
-//				 log(" **** TESTING **** TIME OUT!");
+			   //log(" **** TESTING **** TIME OUT!");
 			   eState = EJOINIP_BEACON_FAIL;
 			   m_pPleaseWait.HideWindow();
 			   m_pError.ShowWindow();
@@ -137,7 +137,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 
 		 break;
 		 //commented out by UBI:
-	  //case EJOINIP_BEACON_FAIL:
-		// break;
+	     //case EJOINIP_BEACON_FAIL:
+		 // break;
    }
 }

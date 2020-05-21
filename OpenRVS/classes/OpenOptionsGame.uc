@@ -20,7 +20,7 @@ function InitPageOptions()
     ButtonFont = Root.Fonts[F_SmallTitle]; 
 
 	//1.6 vanilla DOES NOT have following - this is from 1.56
-//	m_ePageOptID = ePO_Game;
+    //m_ePageOptID = ePO_Game;
 
     fXOffset = 5;
     fXRightOffset = 26;
@@ -32,7 +32,6 @@ function InitPageOptions()
     
     iAutoAimBitmapHeight = 73;
     iAutoAimVPadding     = 5; //Padding Between the bitmap and the scrollBar
-
 
     // ALWAYS RUN
     m_pOptionAlwaysRun = R6WindowButtonBox(CreateControl(class'R6WindowButtonBox', fXOffset, fYOffset, fWidth, fHeight, self));
@@ -64,7 +63,6 @@ function InitPageOptions()
     m_pPopUpLoadPlan.CreateTextAndBox( Localize("Options","Opt_GamePopUpLoadPlan","R6Menu"), 
                                        Localize("Tip","Opt_GamePopUpLoadPlan","R6Menu"),
                                        0, 5);
-    
 
     fYOffset += fYStep;
 	// POP UP LOAD PLAN
@@ -74,14 +72,13 @@ function InitPageOptions()
                                        Localize("Tip","Opt_GamePopUpQuickPlay","R6Menu"),
                                        0, 5);
 
-
     fYOffset += fYStep;
-    
-    	//originally commented out!
+
+    //originally commented out!
 	//moved lower as well
     // UNLIMITED PRATICE
     m_pOptionUnlimitedP = R6WindowButtonBox(CreateControl(class'R6WindowButtonBox', fXOffset, fYOffset, fWidth, fHeight, self));
-//    m_pOptionUnlimitedP.SetButtonBox( false);
+    //m_pOptionUnlimitedP.SetButtonBox( false);
 	//these next lines let us save the status of this box
 	LoadConfig();
 	m_pOptionUnlimitedP.SetButtonBox(bUnlimited);
@@ -90,9 +87,7 @@ function InitPageOptions()
                                           "Hidden beta feature that lets you continue playing after completing or failing objectives.", 0, 
                                           0);
 	
-	
     fYOffset += fYStep;
-    
     
     // AUTO AIM       
     m_pAutoAim = R6WindowTextureBrowser(CreateWindow(class'R6WindowTextureBrowser', fXOffset , fYOffset, WinWidth - fXOffset, C_fSCROLLBAR_HEIGHT + iAutoAimBitmapHeight + iAutoAimVPadding, self));
@@ -112,12 +107,11 @@ function InitPageOptions()
     m_pAutoAim.AddTexture(m_pAutoAimTexture, m_pAutoAimTextReg[2]); 
     m_pAutoAim.AddTexture(m_pAutoAimTexture, m_pAutoAimTextReg[3]);
 
-
 	InitResetButton();
 	//1.6 vanilla DOES NOT have following:
-//	SetMenuGameValues();
+    //SetMenuGameValues();
 
-//	m_bInitComplete = true;
+    //m_bInitComplete = true;
 	//instead has:
 	UpdateOptionsInPage();
 }

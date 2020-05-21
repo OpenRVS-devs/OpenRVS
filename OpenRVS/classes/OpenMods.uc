@@ -55,14 +55,14 @@ function SetMenuMODS()
 		//CRASHES!
 		//something not working right here ...
 		//can we uscript just call the button and "click" it?
-//		class'Actor'.static.GetModMgr().SetCurrentMod(caps(ForceStartMod),GetLevel(),true,Root.Console,GetPlayerOwner().xlevel);
+		//class'Actor'.static.GetModMgr().SetCurrentMod(caps(ForceStartMod),GetLevel(),true,Root.Console,GetPlayerOwner().xlevel);
 		//R6Console(Root.console).CleanAndChangeMod();
-//		R6Console(Root.console).m_GameService.InitModInfo();
-//		R6Console(Root.console).m_GameService.m_ModGSInfo.InitMod();
-//		R6Console(Root.console).LeaveR6Game(LG_InitMod);
-//		R6Console(Root.console).m_bChangeModInProgress = true;
-//		R6Console(Root.console).LeaveR6Game(LG_InitMod);
-//		R6GSServers(class'Actor'.static.GetGameManager().GetGameMgrGameService()).InitializeMod();
+		//R6Console(Root.console).m_GameService.InitModInfo();
+		//R6Console(Root.console).m_GameService.m_ModGSInfo.InitMod();
+		//R6Console(Root.console).LeaveR6Game(LG_InitMod);
+		//R6Console(Root.console).m_bChangeModInProgress = true;
+		//R6Console(Root.console).LeaveR6Game(LG_InitMod);
+		//R6GSServers(class'Actor'.static.GetGameManager().GetGameMgrGameService()).InitializeMod();
 	}
 	//1.4
 	//this section duplicated in OpenMenuIntelWidget
@@ -93,7 +93,7 @@ function SetMenuMODS()
 		if ( CustomPC != none )
 		{
 			CustomPC.default.CheatClass = CheatClass;
-//			log(" OpenRVS experimental SP manager set for: " $ CustomPC);
+			//log(" OpenRVS experimental SP manager set for: " $ CustomPC);
 			if ( FOV != 0 )
 			{
 				FOV = clamp(FOV,65,140);

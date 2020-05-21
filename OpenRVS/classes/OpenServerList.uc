@@ -30,7 +30,7 @@ var config array<AServer> ServerList;
 //if no URL, connects with the default server list at rvsgaming.org
 function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
 {
-//	log(" **** TESTING **** STARTING UP");
+	//log(" **** TESTING **** STARTING UP");
 	M = Widget;
 	if ( W != "" )
 		WebAddress = W;
@@ -41,7 +41,7 @@ function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
 	else
 		FileName = "servers-updated.list";
 	BindPort();
-//	LinkMode = MODE_Line;//orig
+	//LinkMode = MODE_Line;//orig
 	LinkMode = MODE_Text;//different mode - receive file as chunks of text
 	ReceiveMode = RMODE_Event;
 	Resolve(WebAddress);
@@ -50,7 +50,7 @@ function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
 //when received a connection with server list host
 event Resolved(IpAddr Addr)
 {
-//	log(" **** TESTING **** RESOLVED");
+	//log(" **** TESTING **** RESOLVED");
 	super.Resolved(Addr);
 	Addr.Port = 80;
 	Open(Addr);
@@ -58,8 +58,8 @@ event Resolved(IpAddr Addr)
 
 event ResolveFailed()
 {
-//	log(" **** TESTING **** RESOLVE FAILED");
-//	M.NoServerList();//1.2
+	//log(" **** TESTING **** RESOLVE FAILED");
+	//M.NoServerList();//1.2
 	//1.3 noserverlist moved here
 	NoServerList();
 	super.ResolveFailed();
@@ -69,7 +69,7 @@ event ResolveFailed()
 event Opened()
 {
 	super.Opened();
-//	log(" **** TESTING **** OPENED");
+	//log(" **** TESTING **** OPENED");
 	SendText("GET /" $ FileName $ " HTTP/1.0" $ Chr(13) $ Chr(10) $ "Host: " $ WebAddress $ Chr(13) $ Chr(10) $ Chr(13) $ Chr(10));
 }
 
@@ -78,8 +78,8 @@ event ReceivedText(string Text)
 {
 	super.ReceivedText(Text);
 	buffer[buffer.length] = Text;
-//	log(" **** TESTING **** RECEIVED: " $ Text);//will crash if too large
-//	log(" **** TESTING **** END RECEIVED");
+	//log(" **** TESTING **** RECEIVED: " $ Text);//will crash if too large
+	//log(" **** TESTING **** END RECEIVED");
 }
 
 //when connection is finished, check the length of each received line.
@@ -97,9 +97,9 @@ event Closed()
 	local array<string> list;//array to send to widget
 	local string s;//currently working with
 	local string l;//the LAST complete server info we found
-//	log(" **** TESTING **** CLOSED");
+	//log(" **** TESTING **** CLOSED");
 	super.Closed();
-//	log(" **** TESTING **** lines received: " $ buffer.length);
+	//log(" **** TESTING **** lines received: " $ buffer.length);
 	//THE FOLLOWING:
 	//takes any data received from the web address
 	//and splits it into chunks smaller than or equal to 85 characters.
@@ -111,15 +111,15 @@ event Closed()
 	i = 0;
 	while ( i < buffer.length )
 	{
-//		log(" **** TESTING **** line " $ i+1 $ " length: " $ len(buffer[i]));
+		//log(" **** TESTING **** line " $ i+1 $ " length: " $ len(buffer[i]));
 		while ( len(buffer[i]) > 85 )
 		{
-//			log(" **** TESTING **** moving 85 characters to next array element");
+			//log(" **** TESTING **** moving 85 characters to next array element");
 			buffer.insert(i+1,1);
 			buffer[i+1] = right(buffer[i],85);
 			ReplaceText(buffer[i],buffer[i+1],"");//get rid of the text we moved to next array element
 		}
-//		log(" **** TESTING **** line " $ i $ ": " $ buffer[i]);
+		//log(" **** TESTING **** line " $ i $ ": " $ buffer[i]);
 		i++;
 	}
 	//get rid of extraneous received data before the serverlist
@@ -127,7 +127,7 @@ event Closed()
 	s = buffer[0] $ buffer[1];
 	while ( InStr(s,"ServerName=") == -1 )
 	{
-//		log(" **** TESTING **** removing unneeded line: " $ buffer[0]);
+		//log(" **** TESTING **** removing unneeded line: " $ buffer[0]);
 		buffer.Remove(0,1);
 		if ( buffer.length > 1 )
 			s = buffer[0] $ buffer[1];
@@ -135,7 +135,7 @@ event Closed()
 		{
 			log("	 ---- OpenRVS ----");
 			log("	 ERROR: NO SERVER LIST FOUND IN FILE " $ WebAddress $ "/" $ FileName);
-//			M.NoServerList();//1.2
+			//M.NoServerList();//1.2
 			//1.3 noserverlist moved here
 			NoServerList();
 			return;
@@ -145,7 +145,7 @@ event Closed()
 	i = 0;
 	while ( i < buffer.length )
 	{
-//		log(" **** TESTING **** current buffer: " $ buffer[i]);
+		//log(" **** TESTING **** current buffer: " $ buffer[i]);
 		//fill our temp string with up to 3 buffer strings
 		k = 0;//how many buffer strings ahead to count
 		s = "";//temp string init
@@ -154,26 +154,26 @@ event Closed()
 			if ( k > 2 )
 				break;
 			s = s $ buffer[i+k];
-//			log(" **** TESTING **** current k: " $ k $ ", current temp string: " $ s);
+			//log(" **** TESTING **** current k: " $ k $ ", current temp string: " $ s);
 			k++;
 		}
-//		log(" **** TESTING **** FINAL current temp string: " $ s);
+		//log(" **** TESTING **** FINAL current temp string: " $ s);
 		//find the server name, eliminate any text before it
 		j = InStr(s,"ServerName=");
 		if ( j == -1 )//could not find another entry
 		{
-//			log(" **** TESTING **** DONE PARSING");
+			//log(" **** TESTING **** DONE PARSING");
 			//PARSING DONE!
 			if ( List.length > 0 )
 			{
 				log("	 ---- OpenRVS ----");
 				log("	 Loading server list at " $ WebAddress $ "/" $ FileName);
-//				M.ServerListSuccess(List);//1.2
+				//M.ServerListSuccess(List);//1.2
 				//1.3 parsing moved here
 				ServerListSuccess(List);
 			}
 			else
-//				M.NoServerList();//1.2
+				//M.NoServerList();//1.2
 				//1.3 noserverlist moved here
 				NoServerList();
 			return;
@@ -194,22 +194,22 @@ event Closed()
 		{
 			l = s;//last server added update
 			List[List.length] = s;//add server to list to send
-//			log(" **** TESTING **** SERVER FOUND: " $ s);
+			//log(" **** TESTING **** SERVER FOUND: " $ s);
 		}
 		i++;
 	}
-//	log(" **** TESTING **** DONE PARSING");
+	//log(" **** TESTING **** DONE PARSING");
 	//PARSING DONE!
 	if ( List.length > 0 )
 	{
 		log("	 ---- OpenRVS ----");
 		log("	 Loading server list at " $ WebAddress $ "/" $ FileName);
-//		M.ServerListSuccess(List);//1.2
+		//M.ServerListSuccess(List);//1.2
 		//1.3 parsing moved here
 		ServerListSuccess(List);
 	}
 	else
-//		M.NoServerList();//1.2
+		//M.NoServerList();//1.2
 		//1.3 noserverlist moved here
 		NoServerList();
 }
@@ -263,7 +263,7 @@ function NoServerList()
 	local int i;
 	log("	 ---- OpenRVS ----");
 	log("		Loading backup file Servers.list ...");
-//	bDONTQUERY = true;//0.8//commented out - we want to query backup list too
+	//bDONTQUERY = true;//0.8//commented out - we want to query backup list too
 	LoadConfig("Servers.list");
 	M.ClearServerList();//clears the widget's server list
 	i = 0;

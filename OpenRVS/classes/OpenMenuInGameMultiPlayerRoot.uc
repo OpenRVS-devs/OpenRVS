@@ -42,24 +42,18 @@ function ChangeCurrentWidget( eGameWidgetID widgetID )
 //force new FOV so we don't start first round with
 function Paint(Canvas C,float X,float Y)
 {
-	if ( FOV != 0 )
+	if ( FOV != 0 ) && ( GetPlayerOwner() != none ) && ( R6PlayerController(GetPlayerOwner()) != none )
 	{
-		if ( GetPlayerOwner() != none )
+		if ( R6PlayerController(GetPlayerOwner()).default.DefaultFOV != FOV )
 		{
-			if ( R6PlayerController(GetPlayerOwner()) != none )
-			{
-				if ( R6PlayerController(GetPlayerOwner()).default.DefaultFOV != FOV )
-				{
-					R6PlayerController(GetPlayerOwner()).default.DefaultFOV = FOV;
-					R6PlayerController(GetPlayerOwner()).default.DesiredFOV = FOV;
-				}
-				//this section to fix spawning first round with 90 FOV
-				if ( ( R6PlayerController(GetPlayerOwner()).DefaultFOV != FOV ) && ( !R6PlayerController(GetPlayerOwner()).m_bHelmetCameraOn ) )
-				{
-					R6PlayerController(GetPlayerOwner()).DefaultFOV = FOV;
-					R6PlayerController(GetPlayerOwner()).DesiredFOV = FOV;
-				}
-			}
+			R6PlayerController(GetPlayerOwner()).default.DefaultFOV = FOV;
+			R6PlayerController(GetPlayerOwner()).default.DesiredFOV = FOV;
+		}
+		//this section to fix spawning first round with 90 FOV
+		if ( ( R6PlayerController(GetPlayerOwner()).DefaultFOV != FOV ) && ( !R6PlayerController(GetPlayerOwner()).m_bHelmetCameraOn ) )
+		{
+			R6PlayerController(GetPlayerOwner()).DefaultFOV = FOV;
+			R6PlayerController(GetPlayerOwner()).DesiredFOV = FOV;
 		}
 	}
 	super.Paint(C,X,Y);

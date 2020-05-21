@@ -40,12 +40,12 @@ event ReceivedText(IpAddr Addr,string Text)
 		{
 			//if we got to this stage, it's a REPORT response
 			//start szthirdword at the first symbol for GrabOption() to work
-			szThirdWord = mid(szThirdWord,InStr(szThirdWord,"¶"));
+			szThirdWord = mid(szThirdWord,InStr(szThirdWord,"ï¿½"));
 			//debug:
-//			log(left(szThirdWord,20));
+			//log(left(szThirdWord,20));
 			//send the string to ParseOption() with it as first argument, key to look for the second
 			//eg numplayers = ParseOption(szThirdWord,"keyfornumplayers");
-//			log("*"$mid(szThirdWord,30,50));//debug
+			//log("*"$mid(szThirdWord,30,50));//debug
 			//need to overwrite GetKeyValue because it looks for "=" when we need to look for the space between the marker and the value
 			//GrabOption also leaves a space at the end as well as strips the initial symbol
 			//so need to put that symbol back on, and strip the space in GrabOption
@@ -59,7 +59,7 @@ event ReceivedText(IpAddr Addr,string Text)
 			//1.3 - sModName string added to function in MP menu
 			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName);//send received info back to server list
 			//debug:
-//			log("** Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
+			//log("** Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
 		}
 	}
 }
@@ -67,31 +67,31 @@ event ReceivedText(IpAddr Addr,string Text)
 //overridden from parent
 //need to strip out the final space from result
 //also need to add the removed symbol back into result
-function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
+function bool GrabOption(out string Options,out string Result)//ï¿½I1 OBSOLETESUPERSTARS.COM ï¿½F1 RGM
 {
-	if ( Left(Options,1) == "¶" )
+	if ( Left(Options,1) == "ï¿½" )
 	{
 		// Get result.
 		Result = Mid(Options,1);
-		if( InStr(Result,"¶") >= 0 )//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
-			Result = Left(Result,InStr(Result,"¶")-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
-			//Result = Left(Result,InStr(Result,"¶"));//I1 OBSOLETESUPERSTARS.COM
-		Result = "¶" $ Result;//0.8 add the symbol back in - ¶I1 OBSOLETESUPERSTARS.COM
+		if( InStr(Result,"ï¿½") >= 0 )//I1 OBSOLETESUPERSTARS.COM ï¿½F1 RGM
+			Result = Left(Result,InStr(Result,"ï¿½")-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
+			//Result = Left(Result,InStr(Result,"ï¿½"));//I1 OBSOLETESUPERSTARS.COM
+		Result = "ï¿½" $ Result;//0.8 add the symbol back in - ï¿½I1 OBSOLETESUPERSTARS.COM
 
 		// Update options.
-		Options = Mid(Options,1);//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
-		if( InStr(Options,"¶") >= 0 )
-			Options = Mid(Options,InStr(Options,"¶"));//¶F1 RGM
+		Options = Mid(Options,1);//I1 OBSOLETESUPERSTARS.COM ï¿½F1 RGM
+		if( InStr(Options,"ï¿½") >= 0 )
+			Options = Mid(Options,InStr(Options,"ï¿½"));//ï¿½F1 RGM
 		else
 			Options = "";
 		//debug:
-//		log("** Got option pair " $ Result);
+		//log("** Got option pair " $ Result);
 		return true;
 	}
 	else
 	{
 		//debug:
-//		log("* GRABOPTION FALSE");
+		//log("* GRABOPTION FALSE");
 		return false;
 	}
 }
@@ -111,5 +111,5 @@ function GetKeyValue(string Pair,out string Key,out string Value)
 		Value = "";
 	}
 	//debug:
-//	log("** key " $ Key $ " returns value " $ Value);
+	//log("** key " $ Key $ " returns value " $ Value);
 }

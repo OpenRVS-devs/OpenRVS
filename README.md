@@ -23,7 +23,7 @@ A patch to fix Ubisoft's mistakes (intentional and otherwise). Allows multiplaye
 
 ## Version History
 
-#### Release 1.4 release
+#### Release 1.4
 
 - support for custom FOVs added - including fix for weapon fov rendering
 - support for loading the game straight into a mod added
@@ -32,7 +32,7 @@ A patch to fix Ubisoft's mistakes (intentional and otherwise). Allows multiplaye
 - support for cheat manager mods added
 - multiplayer has new actor "OpenRenderFix.OpenFix" to help widescreen players
 
-#### Release 1.3 release
+#### Release 1.3
 
 - behind-the-scenes errors when first loading maplist fixed
 - issue with clogging user.ini fixed (?)
