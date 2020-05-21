@@ -40,7 +40,7 @@ event ReceivedText(IpAddr Addr,string Text)
 		{
 			//if we got to this stage, it's a REPORT response
 			//start szthirdword at the first symbol for GrabOption() to work
-			szThirdWord = mid(szThirdWord,InStr(szThirdWord,"�"));
+			szThirdWord = mid(szThirdWord,InStr(szThirdWord,"¶"));
 			//debug:
 			class'OpenLogger'.static.DebugLog(left(szThirdWord,20));
 			//send the string to ParseOption() with it as first argument, key to look for the second
@@ -67,21 +67,21 @@ event ReceivedText(IpAddr Addr,string Text)
 //overridden from parent
 //need to strip out the final space from result
 //also need to add the removed symbol back into result
-function bool GrabOption(out string Options,out string Result)//�I1 OBSOLETESUPERSTARS.COM �F1 RGM
+function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
 {
-	if ( Left(Options,1) == "�" )
+	if ( Left(Options,1) == "¶" )
 	{
 		// Get result.
 		Result = Mid(Options,1);
-		if( InStr(Result,"�") >= 0 )//I1 OBSOLETESUPERSTARS.COM �F1 RGM
-			Result = Left(Result,InStr(Result,"�")-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
-			//Result = Left(Result,InStr(Result,"�"));//I1 OBSOLETESUPERSTARS.COM
-		Result = "�" $ Result;//0.8 add the symbol back in - �I1 OBSOLETESUPERSTARS.COM
+		if( InStr(Result,"¶") >= 0 )//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
+			Result = Left(Result,InStr(Result,"¶")-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
+			//Result = Left(Result,InStr(Result,"¶"));//I1 OBSOLETESUPERSTARS.COM
+		Result = "¶" $ Result;//0.8 add the symbol back in - ¶I1 OBSOLETESUPERSTARS.COM
 
 		// Update options.
-		Options = Mid(Options,1);//I1 OBSOLETESUPERSTARS.COM �F1 RGM
-		if( InStr(Options,"�") >= 0 )
-			Options = Mid(Options,InStr(Options,"�"));//�F1 RGM
+		Options = Mid(Options,1);//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
+		if( InStr(Options,"¶") >= 0 )
+			Options = Mid(Options,InStr(Options,"¶"));//¶F1 RGM
 		else
 			Options = "";
 		//debug:
