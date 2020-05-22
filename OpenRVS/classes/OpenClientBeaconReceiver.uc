@@ -1,3 +1,6 @@
+// WARNING: This file must be encoded as "Western (Windows 1252)" and not UTF-8.
+// Otherwise, the Pilcrow Sign (¶) will not be correctly parsed by Unreal Engine.
+
 class OpenClientBeaconReceiver extends ClientBeaconReceiver transient;
 
 //new in 0.8
@@ -41,11 +44,10 @@ event ReceivedText(IpAddr Addr,string Text)
 			//if we got to this stage, it's a REPORT response
 			//start szthirdword at the first symbol for GrabOption() to work
 			szThirdWord = mid(szThirdWord,InStr(szThirdWord,"¶"));
-			//debug:
-//			log(left(szThirdWord,20));
+			class'OpenLogger'.static.DebugLog(left(szThirdWord,20));
 			//send the string to ParseOption() with it as first argument, key to look for the second
 			//eg numplayers = ParseOption(szThirdWord,"keyfornumplayers");
-//			log("*"$mid(szThirdWord,30,50));//debug
+			class'OpenLogger'.static.DebugLog(mid(szThirdWord,30,50));
 			//need to overwrite GetKeyValue because it looks for "=" when we need to look for the space between the marker and the value
 			//GrabOption also leaves a space at the end as well as strips the initial symbol
 			//so need to put that symbol back on, and strip the space in GrabOption
@@ -58,8 +60,7 @@ event ReceivedText(IpAddr Addr,string Text)
 			sModName = ParseOption(szThirdWord,ModNameMarker);
 			//1.3 - sModName string added to function in MP menu
 			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName);//send received info back to server list
-			//debug:
-//			log("** Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
+			class'OpenLogger'.static.DebugLog("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
 		}
 	}
 }
@@ -84,14 +85,12 @@ function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUPE
 			Options = Mid(Options,InStr(Options,"¶"));//¶F1 RGM
 		else
 			Options = "";
-		//debug:
-//		log("** Got option pair " $ Result);
+		class'OpenLogger'.static.DebugLog("Got option pair " $ Result);
 		return true;
 	}
 	else
 	{
-		//debug:
-//		log("* GRABOPTION FALSE");
+		class'OpenLogger'.static.DebugLog("GRABOPTION FALSE");
 		return false;
 	}
 }
@@ -110,6 +109,5 @@ function GetKeyValue(string Pair,out string Key,out string Value)
 		Key   = Pair;
 		Value = "";
 	}
-	//debug:
-//	log("** key " $ Key $ " returns value " $ Value);
+	class'OpenLogger'.static.DebugLog("key " $ Key $ " returns value " $ Value);
 }
