@@ -16,11 +16,11 @@ The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories
 1. Run `"SDK ToolBelt.bat"` to enter the CLI
 1. Run `160` to activate the SDK for Raven Shield v1.60
 1. Type `compile` to enter the compiler, and then type `OpenRVS` to compile OpenRVS. Address any errors or warnings if necessary. Type `log` to show more detail. Note: If you see an error regarding `appPreExit`, this can be ignored. This happens when building 1.60 code with the 1.56 compiler, and the compiled output will still be created successfully at `\PATH\TO\SDK\OpenRVS.u`
-1. Type `strip` to enter the symbol/docstring stripper, and then type `OpenRVS` to run it. This will reduce output file size by around 60%
+1. Type `strip` to enter the symbol/docstring stripper, and then type `OpenRVS.u` to run it. This will reduce output file size by around 60%
 1. Copy `OpenRVS.u` and/or `OpenRenderFix.u` to your game directory's `system` folder (both client and server)
 1. Test your changes in-game by connecting to the server
 
-Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to the renderer.
+Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to weapon rendering in multiplayer.
 
 In order to enable debug logging, edit `OpenLogger.uc` and change `false` to `true` where instructed.
 
