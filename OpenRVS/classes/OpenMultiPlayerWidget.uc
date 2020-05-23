@@ -24,35 +24,23 @@ var config string ServerListURL;//0.8 server list file to load
 //var bool bDONTQUERY;//failed to load online list - skips creation of OpenClientBeaconReceiver - commented out because we want to query the backup list
 var bool bServerSuccess;//got list of servers from online provider
 
-//ROOM VALIDITY
-//bRoomValid determines how the cd key manager proceeds
-//issues when set true?
-//just set it false
-//also commented out UBI code that prevents JoinIP in the internet tab
+// QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
+// completed successfully. It is called by the SendMessage() function. In the
+// base game, it is responsible for validating CD keys and joining Ubi.com rooms.
+// In our version, we use the EJRC_NO enum to disable the Ubi.com interaction.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
 function QueryReceivedStartPreJoin ()
 {
-	local bool bRoomValid;
-	class'OpenLogger'.static.DebugLog("QUERYRECEIVEDSTARTPREJOIN");
-	bRoomValid = false;//( m_GameService.m_ClientBeacon.PreJoinInfo.iLobbyID != 0 ) && ( m_GameService.m_ClientBeacon.PreJoinInfo.iGroupID != 0 );
-	//if ( ( m_ConnectionTab == TAB_Internet_Server ) && !bRoomValid )//setting the above will make this error never occur
-	//{
-	//	R6MenuRootWindow(Root).SimplePopUp(Localize("MultiPlayer","PopUp_Error_RoomJoin","R6Menu"),Localize("MultiPlayer","PopUp_Error_NoServer","R6Menu"), EPopUpID_RefreshServerList, MessageBoxButtons.MB_OK);
-	//	Refresh(false);
-	//	return;
-	//}
-	if ( bRoomValid )//eJoinRoomChoice - make this always happen? or set always false?	Hangs and doesn't join when set always true
-	{
-		class'OpenLogger'.static.DebugLog("VALID ROOM FAKED! STARTING CD KEY PROCESS");
-		R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_BY_LOBBY_AND_ROOM_ID,m_GameService.m_ClientBeacon.PreJoinInfo);
-	}
-	else//seems to be best to just set to false and default to this process
-	{
-		class'OpenLogger'.static.DebugLog("INVALID ROOM - starting cd key process with EJRC_NO");
-		R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_NO,m_GameService.m_ClientBeacon.PreJoinInfo);
-	}
+	R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_NO,
+		m_GameService.m_ClientBeacon.PreJoinInfo);
 }
 
-//0.8 - made this function load saved URL for server list
+// Created() fires when the menu widget has been successfully created. It is
+// called by ShowWindow(). In the base game, it sets up some variables regarding
+// server list refreshes. In our version, we use our own server types to
+// populate the server list.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
+// Added in 0.8 - made this function load saved URL for server list
 function Created()
 {
 	local OpenServerList OS;
@@ -96,39 +84,6 @@ function ClearServerList()
 function ServerListSuccess(string sn,string sip,bool sl,string sm)
 {
 	//fill the array with fetched servers
-	//OLD ATTEMPT:
-	//commented out and retry in 1.3
-	/*
-	local int i,j;
-	ServerList.length = 0;
-	i = 0;
-	while ( i < List.length )
-	{
-		ServerList.length = i + 1;
-		//get server name
-		j = InStr(List[i],",");
-		ServerList[i].ServerName = Mid(List[i],0,j-1);
-		class'OpenLogger'.static.DebugLog("" $ ServerList[i].ServerName);
-		List[i] = Mid(List[i],j+5);//get rid of server name and ,IP="
-		//get server IP
-		j = InStr(List[i],",");
-		ServerList[i].IP = Mid(List[i],0,j-1);
-		class'OpenLogger'.static.DebugLog("" $ ServerList[i].IP);
-		List[i] = Mid(List[i],j+8);//get rid of IP and ,Locked=
-		//get locked
-		j = InStr(List[i],",");
-		ServerList[i].Locked = bool(Mid(List[i],0,j-1));
-		class'OpenLogger'.static.DebugLog("" $ ServerList[i].Locked);
-		List[i] = Mid(List[i],j+11);//get rid of locked and ,GameMode="
-		//get coop
-		ServerList[i].GameMode = List[i];
-		class'OpenLogger'.static.DebugLog("" $ ServerList[i].GameMode);
-		i++;
-	}
-	bServerSuccess = true;
-	//SaveConfig("Servers.list");//don't save config in case catastrophic error overwrites good data and client has no backup!
-	GetGSServers();
-	*/
 	//1.3 attempt
 	//rewrote some of the dynamic array logic - see openserverlist for changes
 	//moved parsing the list to the openserverlist class
@@ -149,14 +104,18 @@ function FinishedServers()
 	GetGSServers();
 }
 
-//list known good servers in this function
+// GetGSServers() retrieves the current list of servers from the GameService.
+// It fires when filters or favorites are changed, when switching tabs in the MP
+// menu, and in the Paint() function which fills the window.
+// In the base game, it does not refresh the list, but instead processes a list
+// which has already been built.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
 function GetGSServers()
 {
 	local R6WindowListServerItem NewItem;
 	local int i,j;
 	local int iNumServers;
 	local int iNumServersDisplay;
-	//local int tPing;
 	local string szSelSvrIP;
 	local bool bFirstSvr;
 	local string szGameType;
@@ -218,9 +177,6 @@ function GetGSServers()
 		NewItem.bSameVersion = true;
 		NewItem.szIPAddr = ServerList[i].IP;
 		class'OpenLogger'.static.DebugLog("IP: " $ NewItem.szIPAddr);
-		//if ( m_GameService.CallNativeProcessIcmpPing(NewItem.szIPAddr,tPing) )//can't seem to query ping with this function?
-			//NewItem.iPing = tPing;
-		//else
 		NewItem.iPing = 1000;//was 1000 in early versions, at some point post 0.6 was changed to 9000?
 		NewItem.szName = ServerList[i].ServerName;
 		class'OpenLogger'.static.DebugLog("NAME: " $ NewItem.szName);
@@ -262,50 +218,32 @@ function GetGSServers()
 	QueryForServerInfo();//0.8
 }
 
-//overrided function
-//to allow joining a listed server
-//for server beacon port, just adds 1000 to the server IP address
-//in the original, the cd key manager join function gets called, which has no port specified!
-//try to include the port in m_szServerIP
+// JoinSelectedServerRequested() fires when a user connects to a server in the
+// server list. In the base game, it parses the IP, sends a beacon request, and
+// then hands off to StartQueryServerInfoProcedure(). In our version, we skip
+// any calls to the CD key manager.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
 function JoinSelectedServerRequested()
 {
-	local INT iBeaconPort;
 	if ( m_ServerListBox.m_SelectedItem == None )
 		return;
 	if ( m_ConnectionTab == TAB_Internet_Server )
 	{
-		//THE NEW SYSTEM:
-		//v0.7
-		//treat the connection as a join IP connection
+		//0.7: treat the connection as a join IP connection
 		m_pJoinIPWindow.ShowWindow();
 		R6WindowEditBox(m_pJoinIPWindow.m_pEnterIP.m_ClientArea).SetValue(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr);//set the join ip box to selected server ip
 		m_pJoinIPWindow.PopUpBoxDone(MR_OK,EPopUpID_EnterIP);//fake a click on OK
 		m_bJoinIPInProgress = true;
-
-		//THE OLD SYSTEM:
-		//seemed to cause freezing on SOME computers (not all)
-		//not sure why but join IP still works for everyone
-
-		//get the server IP (NOT INCLUDING PORT) - this one needs the beacon port below
-		//although we may not need to strip port number because m_pQuery does it already
-		//m_szServerIP = Left(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,InStr(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,":"));
-		//get the server beacon port = server port + 1000
-		//iBeaconPort = int(Mid(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,InStr(R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr,":")+1))+1000;
-		class'OpenLogger'.static.DebugLog("WANTS TO JOIN IP: " $ m_szServerIP);
-		class'OpenLogger'.static.DebugLog("WANTS TO QUERY PORT: " $ iBeaconPort);
-		//m_pQueryServerInfo.StartQueryServerInfoProcedure(OwnerWindow,m_szServerIP,iBeaconPort);
-		//m_bQueryServerInfoInProgress = true;
-		//originally, UBI stripped out port information
-		//to fix, try to get IP address with port included
-		//m_szServerIP = R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr;
-		class'OpenLogger'.static.DebugLog("ORIGINAL SERVER PORT INFO: " $ m_szServerIP);
 	}
 	else
 		super.JoinSelectedServerRequested();
 }
 
-//0.8
-//create a custom client beacon receiver class
+// ShowWindow() displays the server list window. It fires when a user changes
+// tabs in the multiplayer menu. In the base game, it performs some CD key
+// checking. In our version, these checks are disabled.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
+//0.8 - create a custom client beacon receiver class
 //0.9 - fix freeze here?
 function ShowWindow()
 {
@@ -384,8 +322,13 @@ function ShowWindow()
 	QueryForServerInfo();
 }
 
-//0.8
-//should let refresh button also update player counts
+// Refresh() refreshes the list of servers. In the base game, it clears the list
+// and rebuilds it with fresh data. It fires when a user opens the server list,
+// manually refreshes, or changes tabs in the MP menu. It is also called by
+// QueryReceivedStartPreJoin(), the Tick() function, and the SendMessage()
+// function (use case unknown). In our version, we execute our own refresh.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
+// 0.8: should let refresh button also update player counts
 function Refresh(bool bActivatedByUser)
 {
 	super.Refresh(bActivatedByUser);
@@ -396,7 +339,6 @@ function Refresh(bool bActivatedByUser)
 function QueryForServerInfo()
 {
 	local R6WindowListServerItem CurServer;
-	//local ServerQ Q;
 	//dont do this function if we haven't received a server list OR if the open beacon isn't loaded
 	if ( !bServerSuccess )
 		return;
@@ -407,16 +349,9 @@ function QueryForServerInfo()
 	//0.8
 	//get each server in the list, then query for more info
 	//0.9
-	//ping update: clear the list of queried servers and recreate it:
-	//removed! can't make ping work nicely?
-	//ServerQs.Remove(0,ServerQs.length);
 	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
 	while ( CurServer != none )
 	{
-		//remove the 0.9 ping attempt
-		//Q.SvrItem = CurServer;
-		//Q.mSeconds = m_GameService.NativeGetMilliSeconds();
-		//ServerQs[ServerQs.length] = Q;
 		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
 		CurServer = R6WindowListServerItem(CurServer.Next);
 	}
@@ -454,9 +389,10 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 	}
 }
 
-//1.3
-//fix accessed none
-//why is there no lan servers at this point?
+// InitServerList() creates a window for the server list. It is called by
+// ShowWindow(). In our version, we are able to override the server ping timeout.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
+// 1.3: fixed access none
 function InitServerList()
 {
 	local Font buttonFont;
