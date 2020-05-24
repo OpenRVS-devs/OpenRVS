@@ -8,9 +8,6 @@ struct Timing
 	var transient int StartTime;
 };
 
-const H_TO_MS = 3600000;//60*60*1000
-const M_TO_MS = 60000;//60*1000
-const S_TO_MS = 1000;
 const ERR_VALUE = -1;
 
 // Timings stores all timers in the class object
