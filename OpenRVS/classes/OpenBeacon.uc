@@ -1,6 +1,3 @@
-// WARNING: This file must be encoded as "Western (Windows 1252)" and not UTF-8.
-// Otherwise, the Pilcrow Sign (¶) will not be correctly parsed by Unreal Engine.
-
 //class to replace UdpBeacon in serveractors list
 //should allow respondprejoinquery() regardless of server registration state
 //this fixes issues in non-n4 admin servers
@@ -10,9 +7,9 @@
 
 class OpenBeacon extends UdpBeacon transient;
 
-const MOTD_MAX_LEN = 60;//Game can only display this many bytes
+const MARKER_MOTD = "O2";
 
-var string MOTDMarker;
+const MOTD_MAX_LEN = 60;//Game can only display this many bytes
 
 event ReceivedText(IpAddr Addr,string Text)
 {
@@ -30,7 +27,7 @@ event ReceivedText(IpAddr Addr,string Text)
 
 // BuildBeaconText() formats the UDP message for the server beacon protocol.
 // Copied from IpDrv/Classes/UdpBeacon.uc in the 1.56 source code.
-// We have made one change: Local beacon marker ¶O2 returns the server MOTD.
+// We have made one change: Local beacon marker Â¶O2 returns the server MOTD.
 function string BuildBeaconText()
 {
 	local string textData;
@@ -192,14 +189,14 @@ function string BuildBeaconText()
 	motd = pServerOptions.MOTD;
 	if ( len(motd) > MOTD_MAX_LEN )
 		motd = left(motd, MOTD_MAX_LEN);
-	textData = textData @ MOTDMarker @ motd;
+	textData = textData @ getMarker(MARKER_MOTD) @ motd;
 	// End OpenRVS modifications.
 
 	return textData;
 }
 
-defaultproperties
+private function string getMarker(string m)
 {
-	// OpenRVS markers should start with ¶O2 and increase sequentially, e.g ¶O3, ¶O4, etc.
-	MOTDMarker="¶O2"
+	// Chr(182) returns Â¶
+	return Chr(182) $ m;
 }

@@ -1,6 +1,3 @@
-// WARNING: This file must be encoded as "Western (Windows 1252)" and not UTF-8.
-// Otherwise, the Pilcrow Sign (¶) will not be correctly parsed by Unreal Engine.
-
 class OpenClientBeaconReceiver extends ClientBeaconReceiver transient;
 
 //new in 0.8
@@ -43,7 +40,7 @@ event ReceivedText(IpAddr Addr,string Text)
 		{
 			//if we got to this stage, it's a REPORT response
 			//start szthirdword at the first symbol for GrabOption() to work
-			szThirdWord = mid(szThirdWord,InStr(szThirdWord,"¶"));
+			szThirdWord = mid(szThirdWord,InStr(szThirdWord, Chr(182)));
 			class'OpenLogger'.static.DebugLog(left(szThirdWord,20));
 			//send the string to ParseOption() with it as first argument, key to look for the second
 			//eg numplayers = ParseOption(szThirdWord,"keyfornumplayers");
@@ -68,21 +65,24 @@ event ReceivedText(IpAddr Addr,string Text)
 //overridden from parent
 //need to strip out the final space from result
 //also need to add the removed symbol back into result
-function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
+function bool GrabOption(out string Options,out string Result)//Â¶I1 OBSOLETESUPERSTARS.COM Â¶F1 RGM
 {
-	if ( Left(Options,1) == "¶" )
+	local string pilcrow;
+	pilcrow = Chr(182);//Â¶
+
+	if ( Left(Options,1) == pilcrow )
 	{
 		// Get result.
 		Result = Mid(Options,1);
-		if( InStr(Result,"¶") >= 0 )//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
-			Result = Left(Result,InStr(Result,"¶")-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
-			//Result = Left(Result,InStr(Result,"¶"));//I1 OBSOLETESUPERSTARS.COM
-		Result = "¶" $ Result;//0.8 add the symbol back in - ¶I1 OBSOLETESUPERSTARS.COM
+		if( InStr(Result, pilcrow) >= 0 )//I1 OBSOLETESUPERSTARS.COM Â¶F1 RGM
+			Result = Left(Result,InStr(Result, pilcrow)-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
+			//Result = Left(Result,InStr(Result,"Â¶"));//I1 OBSOLETESUPERSTARS.COM
+		Result = pilcrow $ Result;//0.8 add the symbol back in - Â¶I1 OBSOLETESUPERSTARS.COM
 
 		// Update options.
-		Options = Mid(Options,1);//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
-		if( InStr(Options,"¶") >= 0 )
-			Options = Mid(Options,InStr(Options,"¶"));//¶F1 RGM
+		Options = Mid(Options,1);//I1 OBSOLETESUPERSTARS.COM Â¶F1 RGM
+		if( InStr(Options, pilcrow) >= 0 )
+			Options = Mid(Options,InStr(Options, pilcrow));//Â¶F1 RGM
 		else
 			Options = "";
 		class'OpenLogger'.static.DebugLog("Got option pair " $ Result);
