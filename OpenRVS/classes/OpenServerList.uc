@@ -260,9 +260,7 @@ function ServerListSuccess(array<string> List)
 		}
 		//error checking for required fields
 		if ( (srv.ServerName == "") || (srv.IP == "") || (srv.GameMode == "") )
-		{
 			continue;//do not add this server
-		}
 		ServerList[ServerList.length] = srv;
 	}
 	M.ClearServerList();//clears the widget's server list
@@ -295,7 +293,6 @@ function NoServerList()
 }
 
 // The native (string).Split() function is missing in this game. Replace it.
-// Allows sep values longer than one character.
 private function int split(string input, string sep, out array<string> fields)
 {
 	local int i;
