@@ -75,11 +75,10 @@ function ClearServerList()
 
 //receives a list of servers via connecting to rvsgaming.org
 //parses into data understandable by the gsservers function
-//function ServerListSuccess(array<string> List)//1.2 version
 //1.3 function heavily modified
 //parsing all moved to openserverlist
 //this function just takes some values and puts them into the serverlist array
-function ServerListSuccess(string sn,string sip,bool sl,string sm)
+function ServerListSuccess(string sn, string sip, string sm)
 {
 	//fill the array with fetched servers
 	//1.3 attempt
@@ -89,7 +88,6 @@ function ServerListSuccess(string sn,string sip,bool sl,string sm)
 	local AServer Temp;
 	Temp.ServerName = sn;
 	Temp.IP = sip;
-	Temp.Locked = sl;
 	Temp.GameMode = sm;
 	ServerList[ServerList.length] = Temp;
 }
