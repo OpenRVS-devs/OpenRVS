@@ -20,9 +20,8 @@ var array<AServer> ServerList;//1.3 - not config - config is now in openserverli
 var config string ServerURL;//0.8 server list URL to load
 var config string ServerListURL;//0.8 server list file to load
 
-//0.8
-//var bool bDONTQUERY;//failed to load online list - skips creation of OpenClientBeaconReceiver - commented out because we want to query the backup list
-var bool bServerSuccess;//got list of servers from online provider
+var bool bServerSuccess;//0.8 got list of servers from online provider
+var int refreshCount;//tracking excess Refresh() calls
 
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
@@ -215,7 +214,6 @@ function GetGSServers()
 	}
 	class'OpenLogger'.static.DebugLog("DONE");
 	ManageToolTip("",true);
-	QueryForServerInfo();//0.8
 }
 
 // JoinSelectedServerRequested() fires when a user connects to a server in the
@@ -302,8 +300,6 @@ function ShowWindow()
 	}
 	//END SUPER
 
-	//if ( bDONTQUERY )//loaded backup list?
-	//return;
 	//0.9:
 	//below will destroy old client beacon and spawn our own
 	//since we added super above, can now comment out this below
@@ -319,26 +315,24 @@ function ShowWindow()
 	}
 	m_GameService.m_ClientBeacon = m_LanServers.m_ClientBeacon;
 	*/
-	QueryForServerInfo();
 }
 
 // Refresh() refreshes the list of servers. In the base game, it clears the list
-// and rebuilds it with fresh data. It fires when a user opens the server list,
-// manually refreshes, or changes tabs in the MP menu. It is also called by
-// QueryReceivedStartPreJoin(), the Tick() function, and the SendMessage()
-// function (use case unknown). In our version, we execute our own refresh.
+// and rebuilds it with fresh data. In our version, we execute our own refresh.
+// Refresh is called at the following times:
+// - When a user opens the Internet tab for the first time
+// - When a user opens the LAN tab for the first time
+// - When a user manually refreshes the list of servers
 // Overrides the matching function in R6MenuMultiPlayerWidget.
 // 0.8: should let refresh button also update player counts
 function Refresh(bool bActivatedByUser)
 {
-	super.Refresh(bActivatedByUser);
-	QueryForServerInfo();
-}
-
-//0.8
-function QueryForServerInfo()
-{
 	local R6WindowListServerItem CurServer;
+
+	refreshCount++;
+	log("refresh has been called" @ refreshCount @ "times");
+	super.Refresh(bActivatedByUser);//call super first
+
 	//dont do this function if we haven't received a server list OR if the open beacon isn't loaded
 	if ( !bServerSuccess )
 		return;
@@ -355,6 +349,68 @@ function QueryForServerInfo()
 		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
 		CurServer = R6WindowListServerItem(CurServer.Next);
 	}
+}
+
+// ManageTabSelection() performs various actions when a user changes the tab in
+// the multiplayer menu.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
+// Copied directly and commented out additional refreshes.
+function ManageTabSelection(INT _MPTabChoiceID)
+{
+    switch(_MPTabChoiceID)
+    {
+        case MultiPlayerTabID.TAB_Lan_Server:
+            m_ConnectionTab = TAB_Lan_Server;
+            //if ( m_LanServers.m_GameServerList.length == 0 )
+            //    Refresh( FALSE );
+            GetLanServers();
+            GetServerInfo( m_LanServers );
+            UpdateServerFilters();
+			m_iLastTabSel = MultiPlayerTabID.TAB_Lan_Server;
+			SaveConfig();
+            break;
+        case MultiPlayerTabID.TAB_Internet_Server:
+            m_ConnectionTab = TAB_Internet_Server;
+            m_LoginSuccessAction = eLSAct_InternetTab;
+            m_pLoginWindow.StartLogInProcedure(self);
+            //if ( m_GameService.m_GameServerList.length == 0 )
+            //    Refresh( FALSE );
+            GetGSServers();
+            UpdateServerFilters();
+			m_iLastTabSel = MultiPlayerTabID.TAB_Internet_Server;
+			SaveConfig();
+            break;
+        case MultiPlayerTabID.TAB_Game_Mode:
+            m_FilterTab = TAB_Game_Mode;
+            m_ServerInfoPlayerBox.HideWindow();
+            m_ServerInfoMapBox.HideWindow();
+            m_ServerInfoOptionsBox.HideWindow();
+            m_pSecondWindow.HideWindow();
+            m_pSecondWindowGameMode.ShowWindow();
+            m_pSecondWindow = m_pSecondWindowGameMode;
+            break;
+        case MultiPlayerTabID.TAB_Tech_Filter:
+            m_FilterTab = TAB_Tech_Filter;
+            m_ServerInfoPlayerBox.HideWindow();
+            m_ServerInfoMapBox.HideWindow();
+            m_ServerInfoOptionsBox.HideWindow();
+            m_pSecondWindow.HideWindow();
+            m_pSecondWindowFilter.ShowWindow();
+            m_pSecondWindow = m_pSecondWindowFilter;
+            break;
+        case MultiPlayerTabID.TAB_Server_Info:
+            m_FilterTab = TAB_Server_Info;
+			m_pSecondWindow.HideWindow();
+			m_pSecondWindowServerInfo.ShowWindow();
+			m_ServerInfoPlayerBox.ShowWindow();
+			m_ServerInfoMapBox.ShowWindow();
+			m_ServerInfoOptionsBox.ShowWindow();
+			m_pSecondWindow = m_pSecondWindowServerInfo;
+            break;
+        default:
+            log("This tab was not supported (OpenMultiPlayerWidget)");
+            break;
+    }
 }
 
 //0.8 written
