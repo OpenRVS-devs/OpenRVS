@@ -20,7 +20,6 @@ struct AServer
 {
 	var string ServerName;
 	var string IP;
-	var bool Locked;
 	var string GameMode;
 };
 var config array<AServer> ServerList;
@@ -223,34 +222,54 @@ event Closed()
 //function parses an array of strings to get server info, then will send each server item to widget
 function ServerListSuccess(array<string> List)
 {
-	local int i,j;
-	local AServer Temp;
-	i = 0;
-	while ( i < List.length )
+	local string line;//comma-separated server parameters "a=b,c=d"
+	local array<string> fields;//parsed server parameters ["a=b", "c=d"]
+	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
+	local int numFields, numSubfields;
+	local int i, j;
+	local AServer srv;
+
+	for (i=0; i<List.Length; i++)
 	{
-		//get server name
-		j = InStr(List[i],",");
-		Temp.ServerName = Mid(List[i],0,j-1);
-		List[i] = Mid(List[i],j+5);//get rid of server name and ,IP="
-		//get server IP
-		j = InStr(List[i],",");
-		Temp.IP = Mid(List[i],0,j-1);
-		List[i] = Mid(List[i],j+8);//get rid of IP and ,Locked=
-		//get locked
-		j = InStr(List[i],",");
-		Temp.Locked = bool(Mid(List[i],0,j-1));
-		List[i] = Mid(List[i],j+11);//get rid of locked and ,GameMode="
-		//get coop
-		Temp.GameMode = List[i];
-		ServerList[ServerList.length] = Temp;
-		i++;
+		line = "ServerName=\"" $ List[i] $ "\"";//needed for kv parser
+		numFields = split(line, ",", fields);//fields is now a list of k=v
+		for (j=0; j<numFields; j++)
+		{
+			numSubfields = split(fields[j], "=", kvpair);//kvpair is one k=v set
+			if (numSubfields != 2)
+			{
+				//occurs when someone has "=" in their server name
+				//we simply drop anything after (and including) the first "="
+				log("warning: failed to parse k=v in ServerListSuccess:" @ fields[j]);
+			}
+			switch (kvpair[0])//text before "="
+			{
+				case "ServerName":
+					srv.ServerName = stripQuotes(kvpair[1]);
+					break;
+				case "IP":
+					srv.IP = stripQuotes(kvpair[1]);
+					break;
+				case "GameMode":
+					srv.GameMode = stripQuotes(kvpair[1]);
+					break;
+				default:
+					log("warning: unsupported key" @ kvpair[0]);
+					break;
+			}
+		}
+		//error checking for required fields
+		if ( (srv.ServerName == "") || (srv.IP == "") || (srv.GameMode == "") )
+		{
+			continue;//do not add this server
+		}
+		ServerList[ServerList.length] = srv;
 	}
 	M.ClearServerList();//clears the widget's server list
-	i = 0;
-	while ( i < ServerList.length )
+
+	for (i=0; i<ServerList.Length; i++)
 	{
-		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].Locked,ServerList[i].GameMode);
-		i++;
+		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].GameMode);
 	}
 	M.FinishedServers();//tells widget that the list is done, display them
 }
@@ -269,8 +288,39 @@ function NoServerList()
 	i = 0;
 	while ( i < ServerList.length )
 	{
-		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].Locked,ServerList[i].GameMode);
+		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].GameMode);
 		i++;
 	}
 	M.FinishedServers();//tells widget that the list is done, display them
+}
+
+// The native (string).Split() function is missing in this game. Replace it.
+// Allows sep values longer than one character.
+private function int split(string input, string sep, out array<string> fields)
+{
+	local int i;
+	local bool done;
+
+	fields.Remove(0, fields.Length);
+	while (!done) {
+		i = InStr(input, sep);
+		if (i != -1)//sep is present, there are more fields
+		{
+			fields[fields.Length] = Mid(input, 0, i);//save the field text
+			input = Mid(input, i+1);//trim the string for the next iteration
+		}
+		else//final field
+		{
+			fields[fields.Length] = input;
+			done = true;
+		}
+	}
+
+	return fields.Length;
+}
+
+// Replaces '"text"' with 'text'.
+private function string stripQuotes(string s)
+{
+	return Mid(s, 1, Len(s)-2);
 }
