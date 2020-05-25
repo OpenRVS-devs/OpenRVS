@@ -21,7 +21,6 @@ var config string ServerURL;//0.8 server list URL to load
 var config string ServerListURL;//0.8 server list file to load
 
 var bool bServerSuccess;//0.8 got list of servers from online provider
-var int refreshCount;//tracking excess Refresh() calls
 
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
@@ -329,8 +328,6 @@ function Refresh(bool bActivatedByUser)
 {
 	local R6WindowListServerItem CurServer;
 
-	refreshCount++;
-	log("refresh has been called" @ refreshCount @ "times");
 	super.Refresh(bActivatedByUser);//call super first
 
 	//dont do this function if we haven't received a server list OR if the open beacon isn't loaded
