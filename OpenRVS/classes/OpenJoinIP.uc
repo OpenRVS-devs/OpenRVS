@@ -18,7 +18,6 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 	{
 		if ( _ePopUpID == EPopUpID_EnterIP )
 		{
-			class'OpenLogger'.static.DebugLog("popupboxdone() enterIP");
 			m_szIP = R6WindowEditBox(m_pEnterIP.m_ClientArea).GetValue();
 			
 			//THIS IS UBI'S ORIGINAL LINE:
@@ -31,27 +30,22 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 			//because when ClientBeaconReceiver sees port 0, it just assumes the default port
 			
 			//here's the new version:
-			class'OpenLogger'.static.DebugLog("finding correct port number");
 			if ( InStr(m_szIP,":") != -1 )//find if a port number included
 				m_iPort = int(Mid(m_szIP,InStr(m_szIP,":")+1))+1000;//get the port number (port to question is default +1000)
 			else
 				m_iPort = 0;//no port included, use the default port
-			class'OpenLogger'.static.DebugLog("checking prejoinquery");
 			if ( !m_GameService.m_ClientBeacon.PreJoinQuery(m_szIP,m_iPort) )
 			{
 				// handle invalid ip string format here
-				class'OpenLogger'.static.DebugLog("wrong IP string");
 				PopUpBoxDone(MR_OK,EPopUpID_JoinIPError);
-				log("Invalid IP string entered");
+				class'OpenLogger'.static.Info("Invalid IP string entered", self);
 			}
 			else
 			{
-				class'OpenLogger'.static.DebugLog("starting the connection");
 				if ( !m_bStartByCmdLine )
 					m_pPleaseWait.ShowWindow();
 				m_fBeaconTime =  m_GameService.NativeGetSeconds();
 				eState = EJOINIP_WAITING_FOR_BEACON;
-				class'OpenLogger'.static.DebugLog("state is waiting for beacon");
 			}
 		}
 		else
@@ -78,16 +72,14 @@ function Manager( UWindowWindow _pCurrentWidget )
 		break;
 
 		case EJOINIP_WAITING_FOR_BEACON:
-		class'OpenLogger'.static.DebugLog("WAITING FOR BEACON");
 		// Response has been received from the server
 		if ( m_GameService.m_ClientBeacon.PreJoinInfo.bResponseRcvd )
 		{
-			class'OpenLogger'.static.DebugLog("RECEIVED A RESPONSE");
-			class'OpenLogger'.static.DebugLog("INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer);
+			class'OpenLogger'.static.Debug("INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer, self);
 			// Verify that the server is the same version as the game
 			if ( Root.Console.ViewportOwner.Actor.GetGameVersion() != m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion )
 			{
-				class'OpenLogger'.static.DebugLog("VERSION FAIL");
+				class'OpenLogger'.static.Error("VERSION FAIL", self);
 				eState = EJOINIP_BEACON_FAIL;
 				m_pPleaseWait.HideWindow();
 				m_pError.ShowWindow();
@@ -95,7 +87,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 			}
 			else if ( R6Console(Root.console).m_bNonUbiMatchMaking )
 			{
-				class'OpenLogger'.static.DebugLog("NON UBI MATCHMAKING");
+				class'OpenLogger'.static.Error("NON UBI MATCHMAKING", self);
 				_pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
 				if (!m_bStartByCmdLine)
 				HideWindow();
@@ -116,8 +108,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 				//set to always false? seems to prevent hang when joining my personal server
 				m_bRoomValid = false;//( m_GameService.m_ClientBeacon.PreJoinInfo.iLobbyID != 0 && m_GameService.m_ClientBeacon.PreJoinInfo.iGroupID != 0 );
 				_pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
-				class'OpenLogger'.static.DebugLog("SUCCESS");
-				class'OpenLogger'.static.DebugLog("ROOM VALID: " $ m_bRoomValid);
+				class'OpenLogger'.static.Debug("SUCCESS", self);
 				HideWindow();
 			}
 		}
@@ -127,17 +118,13 @@ function Manager( UWindowWindow _pCurrentWidget )
 			elapsedTime = m_GameService.NativeGetSeconds() - m_fBeaconTime;
 			if ( elapsedTime > K_MAX_TIME_BEACON )
 			{
-				class'OpenLogger'.static.DebugLog("TIME OUT!");
+				class'OpenLogger'.static.Warning("beacon timed out", self);
 				eState = EJOINIP_BEACON_FAIL;
 				m_pPleaseWait.HideWindow();
 				m_pError.ShowWindow();
 				R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_NoServer","R6Menu");
 			}
 		}
-
 		break;
-		//commented out by UBI:
-		//case EJOINIP_BEACON_FAIL:
-		// break;
 	}
 }

@@ -8,28 +8,34 @@
 // - this class now handles all parsing of server information
 // - also handles loading backup server list if connection fails
 // - now passes each server's info to the widget class instead of passing the raw strings to parse
-
 class OpenServerList extends TcpLink;
 
-var OpenMultiPlayerWidget M;
-var string WebAddress;
-var string FileName;
-var array<string> buffer;
-//1.3 added here
 struct AServer
 {
 	var string ServerName;
 	var string IP;
 	var string GameMode;
-};
+};//1.3 added here
+
+var OpenMultiPlayerWidget M;
+var string WebAddress;
+var string FileName;
 var config array<AServer> ServerList;
 
 //start up
 //receives a URL from multiplayer widget
 //if no URL, connects with the default server list at rvsgaming.org
-function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
+function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F)
 {
-	class'OpenLogger'.static.DebugLog("STARTING UP");
+	local OpenHTTPClient httpc;
+
+	log("	 ---- OpenRVS ----");
+	log("	 Author: Twi");
+	log("	 With thanks to Tony and Psycho");
+	log("	 As well as SMC and SS clans");
+
+	class'OpenLogger'.static.Debug("STARTING UP", self);
+
 	M = Widget;
 	if ( W != "" )
 		WebAddress = W;
@@ -39,46 +45,11 @@ function Init(OpenMultiPlayerWidget Widget,optional string W,optional string F)
 		FileName = F;
 	else
 		FileName = "servers-updated.list";
-	BindPort();
-	//LinkMode = MODE_Line;//orig
-	LinkMode = MODE_Text;//different mode - receive file as chunks of text
-	ReceiveMode = RMODE_Event;
-	Resolve(WebAddress);
-}
 
-//when received a connection with server list host
-event Resolved(IpAddr Addr)
-{
-	class'OpenLogger'.static.DebugLog("RESOLVED");
-	super.Resolved(Addr);
-	Addr.Port = 80;
-	Open(Addr);
-}
-
-event ResolveFailed()
-{
-	class'OpenLogger'.static.DebugLog("RESOLVE FAILED");
-	//M.NoServerList();//1.2
-	//1.3 noserverlist moved here
-	NoServerList();
-	super.ResolveFailed();
-	Destroy();
-}
-
-event Opened()
-{
-	super.Opened();
-	class'OpenLogger'.static.DebugLog("OPENED");
-	SendText("GET /" $ FileName $ " HTTP/1.0" $ Chr(13) $ Chr(10) $ "Host: " $ WebAddress $ Chr(13) $ Chr(10) $ Chr(13) $ Chr(10));
-}
-
-//add each received line to a dynamic array of strings to parse later
-event ReceivedText(string Text)
-{
-	super.ReceivedText(Text);
-	buffer[buffer.length] = Text;
-	class'OpenLogger'.static.DebugLog("RECEIVED: " $ Text);//will crash if too large
-	class'OpenLogger'.static.DebugLog("END RECEIVED");
+	httpc = Spawn(class'OpenHTTPClient');
+	httpc.CallbackName = "server_list";//access OpenHTTPClient.CALLBACK_SERVER_LIST?
+	httpc.ServerListCallbackProvider = self;
+	httpc.SendRequest("http://" $ WebAddress $ "/" $ FileName);
 }
 
 //when connection is finished, check the length of each received line.
@@ -89,128 +60,37 @@ event ReceivedText(string Text)
 //a server name",IP="44.434.4.434:7777",Locked=false,GameMode="Adver
 //the function in OpenMultiPlayerWidget will parse this further to get the needed info.
 //1.3 - NO LONGER parsed in OpenMultiPlayerWidget, parsed below
-event Closed()
+function ParseServersINI(OpenHTTPClient.HttpResponse resp)
 {
-	local int i;//index for counting received strings
-	local int j,k;
-	local array<string> list;//array to send to widget
-	local string s;//currently working with
-	local string l;//the LAST complete server info we found
-	class'OpenLogger'.static.DebugLog("CLOSED");
-	super.Closed();
-	class'OpenLogger'.static.DebugLog("lines received: " $ buffer.length);
-	//THE FOLLOWING:
-	//takes any data received from the web address
-	//and splits it into chunks smaller than or equal to 85 characters.
-	//these chunks are easily manageable and can be manipulated and parsed easily.
-	//when strings are too large it can cause issues or crash the game
-	//so to work with the received data we break it apart.
-	//85 chosen because you can add up to 3 strings of that size together and will still be less than 256 chars.
-	//don't know if this actually matters lol
-	i = 0;
-	while ( i < buffer.length )
+	local array<string> lines;
+	local string line;
+	local int i;
+
+	//Check for errors.
+	if (resp.Code != 200)
 	{
-		class'OpenLogger'.static.DebugLog("line " $ i+1 $ " length: " $ len(buffer[i]));
-		while ( len(buffer[i]) > 85 )
-		{
-			class'OpenLogger'.static.DebugLog("moving 85 characters to next array element");
-			buffer.insert(i+1,1);
-			buffer[i+1] = right(buffer[i],85);
-			ReplaceText(buffer[i],buffer[i+1],"");//get rid of the text we moved to next array element
-		}
-		class'OpenLogger'.static.DebugLog("line " $ i $ ": " $ buffer[i]);
-		i++;
+		class'OpenLogger'.static.Error("failed to retrieve servers over http", self);
+		NoServerList();
 	}
-	//get rid of extraneous received data before the serverlist
-	//NOTE: shouldn't be an issue but assumes that there's at least two entries in buffer array
-	s = buffer[0] $ buffer[1];
-	while ( InStr(s,"ServerName=") == -1 )
+
+	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
+	class'OpenString'.static.Split(resp.Body, Chr(10), lines);
+	lines.Remove(0, 1);//skips header line (specific to INI parser)
+	for (i=0; i<lines.Length; i++)
 	{
-		class'OpenLogger'.static.DebugLog("removing unneeded line: " $ buffer[0]);
-		buffer.Remove(0,1);
-		if ( buffer.length > 1 )
-			s = buffer[0] $ buffer[1];
-		else
-		{
-			log("	 ---- OpenRVS ----");
-			log("	 ERROR: NO SERVER LIST FOUND IN FILE " $ WebAddress $ "/" $ FileName);
-			//M.NoServerList();//1.2
-			//1.3 noserverlist moved here
-			NoServerList();
-			return;
-		}
+		line = lines[i];
+		line = Mid(line, 12);//trim up to "ServerName="
+		line = Left(line, Len(line)-1);//remove )
+		lines[i] = line;//overwrite
 	}
-	//create an array of strings, each containing one server info
-	i = 0;
-	while ( i < buffer.length )
+
+	if ( lines.length > 0 )
 	{
-		class'OpenLogger'.static.DebugLog("current buffer: " $ buffer[i]);
-		//fill our temp string with up to 3 buffer strings
-		k = 0;//how many buffer strings ahead to count
-		s = "";//temp string init
-		while ( buffer.length > i + k )
-		{
-			if ( k > 2 )
-				break;
-			s = s $ buffer[i+k];
-			class'OpenLogger'.static.DebugLog("current k: " $ k $ ", current temp string: " $ s);
-			k++;
-		}
-		class'OpenLogger'.static.DebugLog("FINAL current temp string: " $ s);
-		//find the server name, eliminate any text before it
-		j = InStr(s,"ServerName=");
-		if ( j == -1 )//could not find another entry
-		{
-			class'OpenLogger'.static.DebugLog("DONE PARSING");
-			//PARSING DONE!
-			if ( List.length > 0 )
-			{
-				log("	 ---- OpenRVS ----");
-				log("	 Loading server list at " $ WebAddress $ "/" $ FileName);
-				//M.ServerListSuccess(List);//1.2
-				//1.3 parsing moved here
-				ServerListSuccess(List);
-			}
-			else
-				//M.NoServerList();//1.2
-				//1.3 noserverlist moved here
-				NoServerList();
-			return;
-		}
-		s = Mid(s,j+12);//truncate to start string at server name
-		//if there's no closing parenthesis, add on the next buffer - note: assumes there IS a next buffer - should always be unless list formatted wrong
-		j = InStr(s,")");
-		while ( j == -1 )
-		{
-			s = s $ buffer[i+k];
-			k++;
-			j = InStr(s,")");
-		}
-		s = Mid(s,0,j-1);
-		//double check in case server found is same as last server added
-		//can happen because of way we add strings together
-		if ( s != l )
-		{
-			l = s;//last server added update
-			List[List.length] = s;//add server to list to send
-			class'OpenLogger'.static.DebugLog("SERVER FOUND: " $ s);
-		}
-		i++;
-	}
-	class'OpenLogger'.static.DebugLog("DONE PARSING");
-	//PARSING DONE!
-	if ( List.length > 0 )
-	{
-		log("	 ---- OpenRVS ----");
-		log("	 Loading server list at " $ WebAddress $ "/" $ FileName);
-		//M.ServerListSuccess(List);//1.2
-		//1.3 parsing moved here
-		ServerListSuccess(List);
+		class'OpenLogger'.static.Info("loading server list from URL", self);
+		ServerListSuccess(lines);//1.3 parsing moved here
 	}
 	else
-		//M.NoServerList();//1.2
-		//1.3 noserverlist moved here
-		NoServerList();
+		NoServerList();//1.3 noserverlist moved here
 }
 
 //1.3
@@ -222,40 +102,38 @@ event Closed()
 //function parses an array of strings to get server info, then will send each server item to widget
 function ServerListSuccess(array<string> List)
 {
-	local string line;//comma-separated server parameters "a=b,c=d"
 	local array<string> fields;//parsed server parameters ["a=b", "c=d"]
 	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
 	local int numFields, numSubfields;
 	local int i, j;
 	local AServer srv;
 
+	class'OpenLogger'.static.Info("parsing" @ List.Length @ "server lines", self);
 	for (i=0; i<List.Length; i++)
 	{
-		line = "ServerName=\"" $ List[i] $ "\"";//needed for kv parser
-		numFields = split(line, ",", fields);//fields is now a list of k=v
+		numFields = class'OpenString'.static.Split(List[i], ",", fields);//fields is now a list of k=v
 		for (j=0; j<numFields; j++)
 		{
-			numSubfields = split(fields[j], "=", kvpair);//kvpair is one k=v set
+			numSubfields = class'OpenString'.static.Split(fields[j], "=", kvpair);//kvpair is one k=v set
 			if (numSubfields != 2)
 			{
 				//occurs when someone has "=" in their server name
 				//we simply drop anything after (and including) the first "="
-				log("warning: failed to parse k=v in ServerListSuccess:" @ fields[j]);
+				class'OpenLogger'.static.Warning("failed to parse k=v in ServerListSuccess:" @ fields[j], self);
 			}
 			switch (kvpair[0])//text before "="
 			{
 				case "ServerName":
-					srv.ServerName = stripQuotes(kvpair[1]);
+					srv.ServerName = class'OpenString'.static.StripQuotes(kvpair[1]);
 					break;
 				case "IP":
-					srv.IP = stripQuotes(kvpair[1]);
+					srv.IP = class'OpenString'.static.StripQuotes(kvpair[1]);
 					break;
 				case "GameMode":
-					srv.GameMode = stripQuotes(kvpair[1]);
+					srv.GameMode = class'OpenString'.static.StripQuotes(kvpair[1]);
 					break;
 				default:
-					log("warning: unsupported key" @ kvpair[0]);
-					break;
+					break;//unsupported key, nothing to do
 			}
 		}
 		//error checking for required fields
@@ -263,8 +141,9 @@ function ServerListSuccess(array<string> List)
 			continue;//do not add this server
 		ServerList[ServerList.length] = srv;
 	}
-	M.ClearServerList();//clears the widget's server list
+	class'OpenLogger'.static.Info("loading" @ ServerList.Length @ "parsed servers", self);
 
+	M.ClearServerList();//clears the widget's server list
 	for (i=0; i<ServerList.Length; i++)
 	{
 		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].GameMode);
@@ -278,8 +157,7 @@ function ServerListSuccess(array<string> List)
 function NoServerList()
 {
 	local int i;
-	log("	 ---- OpenRVS ----");
-	log("		Loading backup file Servers.list ...");
+	class'OpenLogger'.static.Info("loading backup file Servers.list", self);
 	//bDONTQUERY = true;//0.8//commented out - we want to query backup list too
 	LoadConfig("Servers.list");
 	M.ClearServerList();//clears the widget's server list
@@ -290,34 +168,4 @@ function NoServerList()
 		i++;
 	}
 	M.FinishedServers();//tells widget that the list is done, display them
-}
-
-// The native (string).Split() function is missing in this game. Replace it.
-private function int split(string input, string sep, out array<string> fields)
-{
-	local int i;
-	local bool done;
-
-	fields.Remove(0, fields.Length);
-	while (!done) {
-		i = InStr(input, sep);
-		if (i != -1)//sep is present, there are more fields
-		{
-			fields[fields.Length] = Mid(input, 0, i);//save the field text
-			input = Mid(input, i+1);//trim the string for the next iteration
-		}
-		else//final field
-		{
-			fields[fields.Length] = input;
-			done = true;
-		}
-	}
-
-	return fields.Length;
-}
-
-// Replaces '"text"' with 'text'.
-private function string stripQuotes(string s)
-{
-	return Mid(s, 1, Len(s)-2);
 }

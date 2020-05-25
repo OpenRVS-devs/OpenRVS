@@ -12,13 +12,11 @@ function ProcessGSMsg(string Msg)
 	switch ( Msg )
 	{
 		case "UP_ENTER_CD_KEY":
-			class'OpenLogger'.static.DebugLog("up enter cd key");
 			m_pR6EnterCDKey.ModifyTextWindow(Localize("MultiPlayer","PopUp_EnterCDKey","R6Menu"),205.0,170.0,230.0,30.0);
 			m_pR6EnterCDKey.ShowWindow();
 			SelectCDKeyBox(false);
 			ShowWindow();
 			PopUpBoxDone(MR_OK,EPopUpID_EnterCDKey);//say that we are done cd key popup (even though we are not)
-			class'OpenLogger'.static.DebugLog("done up enter cd key");
 		break;
 		default:
 			super.ProcessGSMsg(Msg);
@@ -28,7 +26,6 @@ function ProcessGSMsg(string Msg)
 		//and probably would do the same when joining full server
 		/*
 		case "JOIN_SERVER_REQ_SUCCESS":
-			class'OpenLogger'.static.DebugLog("MWM_CDKEYVAL_SUCCESS");
 			m_pSendMessageDest.SendMessage(MWM_CDKEYVAL_SUCCESS);
 		break;
 		case "JOIN_SERVER_FAIL_PASSWORDNOTCORRECT":
@@ -45,10 +42,8 @@ function ProcessGSMsg(string Msg)
 		break;
 		default://all the up_ and act_ should pretend to be req_success instead of throwing error messages
 			m_GameService.SaveInfo();
-			class'OpenLogger'.static.DebugLog("GAMESERVICE SAVEINFO");
 			m_pPleaseWait.HideWindow();
 			HandlePunkBusterSvrSituation();
-			class'OpenLogger'.static.DebugLog("HIDEWINDOW AND HANDLEPUNKBUSTER");
 		break;
 		*/
 	}
@@ -56,22 +51,17 @@ function ProcessGSMsg(string Msg)
 
 function PopUpBoxDone(MessageBoxResult Result,EPopUpID _ePopUpID)
 {
-	class'OpenLogger'.static.DebugLog("popupboxdone: " $ Result @ _ePopUpID);
+	class'OpenLogger'.static.Debug("PopUpBoxDone: " $ Result @ _ePopUpID, self);
 	if ( ( Result == MR_OK ) && ( _ePopUpID == EPopUpID_EnterCDKey ) )
 	{
-		class'OpenLogger'.static.DebugLog("MR OK showing window");
-		//original:
-		//m_GameService.EnterCDKey(R6WindowEditBox(m_pR6EnterCDKey.m_ClientArea).GetValue());
 		m_pPleaseWait.ShowWindow();
-		class'OpenLogger'.static.DebugLog("game service saveinfo");
 		//crack fix:
 		m_GameService.SaveInfo();
-		class'OpenLogger'.static.DebugLog("hiding window");
 		m_pPleaseWait.HideWindow();
-		class'OpenLogger'.static.DebugLog("IS GAME LOCKED? " $ m_preJoinRespInfo.bLocked);
-		class'OpenLogger'.static.DebugLog("handlepunkbustersvrs");
+		class'OpenLogger'.static.Debug("IS GAME LOCKED? " $ m_preJoinRespInfo.bLocked, self);
+		class'OpenLogger'.static.Debug("handlepunkbustersvrs", self);
 		HandlePunkBusterSvrSituation();
-		class'OpenLogger'.static.DebugLog("done handlepunk");
+		class'OpenLogger'.static.Debug("done handlepunk", self);
 	}
 	else
 		super.PopUpBoxDone(Result,_ePopUpID);
