@@ -14,9 +14,8 @@ var bool bLogged,bCracked;
 event PreBeginPlay()
 {
 	log("	 ---- OpenRVS ----");
-	log("	 Author: Twi");
-	log("	 With thanks to Tony and Psycho");
-	log("	 As well as SMC and SS clans");
+	log("	 The team: Twi, ijemafe, and Tony");
+	log("	 With thanks to chriswack, Psycho, SMC clan, and SS clan");
 	super.PreBeginPlay();
 	SetTimer(60,true);
 }
