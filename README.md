@@ -3,7 +3,7 @@
 By the OpenRVS team:
   - original author: Twi
   - programming: Twi and ijemafe
-  - game service fix: chriswack
+  - game service fix: chriswak
   - community hosting: Tony and SMC Clan
 
 A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
