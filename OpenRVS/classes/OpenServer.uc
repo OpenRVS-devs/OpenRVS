@@ -15,7 +15,7 @@ event PreBeginPlay()
 {
 	log("	 ---- OpenRVS ----");
 	log("	 The team: Twi, ijemafe, and Tony");
-	log("	 With thanks to chriswack, Psycho, SMC clan, and SS clan");
+	log("	 With thanks to chriswak, Psycho, SMC clan, and SS clan");
 	super.PreBeginPlay();
 	SetTimer(60,true);
 }
