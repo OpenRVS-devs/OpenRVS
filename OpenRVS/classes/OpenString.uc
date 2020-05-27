@@ -31,3 +31,24 @@ static function string StripQuotes(string s)
 {
 	return Mid(s, 1, Len(s)-2);
 }
+
+// replaces "replace" with "with" in "Text"
+// this function exists in Actor.uc but is not static and thus not available to non-actor objects
+// thus, added here
+static function string ReplaceText(string Text, string Replace, string With)
+{
+	local int i;
+	local string Input;
+	
+	Input = Text;
+	Text = "";
+	i = InStr(Input, Replace);
+	while ( i != -1 )
+	{
+		Text = Text $ Left(Input, i) $ With;
+		Input = Mid(Input, i + Len(Replace));	
+		i = InStr(Input, Replace);
+	}
+	Text = Text $ Input;
+	return Text;
+}
