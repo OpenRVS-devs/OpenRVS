@@ -18,6 +18,7 @@ struct AServer
 };//1.3 added here
 
 var OpenMultiPlayerWidget M;
+var OpenHTTPClient httpc;
 var string WebAddress;
 var string FileName;
 var config array<AServer> ServerList;
@@ -27,13 +28,7 @@ var config array<AServer> ServerList;
 //if no URL, connects with the default server list at rvsgaming.org
 function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F)
 {
-	local OpenHTTPClient httpc;
-
-	log("	 ---- OpenRVS ----");
-	log("	 Author: Twi");
-	log("	 With thanks to Tony and Psycho");
-	log("	 As well as SMC and SS clans");
-
+	class'OpenLogger'.static.LogStartupMessage();
 	class'OpenLogger'.static.Debug("STARTING UP", self);
 
 	M = Widget;
@@ -47,7 +42,7 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 		FileName = "servers-updated.list";
 
 	httpc = Spawn(class'OpenHTTPClient');
-	httpc.CallbackName = "server_list";//access OpenHTTPClient.CALLBACK_SERVER_LIST?
+	httpc.CallbackName = "server_list";
 	httpc.ServerListCallbackProvider = self;
 	httpc.SendRequest("http://" $ WebAddress $ "/" $ FileName);
 }
@@ -65,6 +60,8 @@ function ParseServersINI(OpenHTTPClient.HttpResponse resp)
 	local array<string> lines;
 	local string line;
 	local int i;
+
+	httpc = none;//done with HTTP client
 
 	//Check for errors.
 	if (resp.Code != 200)
@@ -146,9 +143,11 @@ function ServerListSuccess(array<string> List)
 	M.ClearServerList();//clears the widget's server list
 	for (i=0; i<ServerList.Length; i++)
 	{
-		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].GameMode);
+		M.AddServerToList(ServerList[i].ServerName, ServerList[i].IP, ServerList[i].GameMode);
 	}
 	M.FinishedServers();//tells widget that the list is done, display them
+
+	ServerList.Remove(0, ServerList.Length);//all done, free the temp list
 }
 
 //1.3
@@ -157,15 +156,17 @@ function ServerListSuccess(array<string> List)
 function NoServerList()
 {
 	local int i;
+
 	class'OpenLogger'.static.Info("loading backup file Servers.list", self);
-	//bDONTQUERY = true;//0.8//commented out - we want to query backup list too
 	LoadConfig("Servers.list");
 	M.ClearServerList();//clears the widget's server list
 	i = 0;
 	while ( i < ServerList.length )
 	{
-		M.ServerListSuccess(ServerList[i].ServerName,ServerList[i].IP,ServerList[i].GameMode);
+		M.AddServerToList(ServerList[i].ServerName, ServerList[i].IP, ServerList[i].GameMode);
 		i++;
 	}
 	M.FinishedServers();//tells widget that the list is done, display them
+
+	ServerList.Remove(0, ServerList.Length);//all done, free the temp list
 }

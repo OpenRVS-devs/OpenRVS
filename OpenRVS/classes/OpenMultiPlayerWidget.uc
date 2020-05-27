@@ -15,7 +15,6 @@ struct AServer
 	var bool Locked;
 	var string GameMode;
 };
-//var config array<AServer> ServerList;//1.2 - was config
 var array<AServer> ServerList;//1.3 - not config - config is now in openserverlist, which handles loading the backup list
 var config string ServerURL;//0.8 server list URL to load
 var config string ServerListURL;//0.8 server list file to load
@@ -75,12 +74,8 @@ function ClearServerList()
 	ServerList.remove(0,ServerList.length);
 }
 
-//receives a list of servers via connecting to rvsgaming.org
-//parses into data understandable by the gsservers function
-//1.3 function heavily modified
-//parsing all moved to openserverlist
-//this function just takes some values and puts them into the serverlist array
-function ServerListSuccess(string sn, string sip, string sm)
+// Adds a server to the list.
+function AddServerToList(string sn, string sip, string sm)
 {
 	//fill the array with fetched servers
 	//1.3 attempt
@@ -191,7 +186,7 @@ function GetGSServers()
 		// be the first server in the list.
 		if ( NewItem.szIPAddr == szSelSvrIP || bFirstSvr )
 		{
-			m_ServerListBox.SetSelectedItem( NewItem );
+			m_ServerListBox.SetSelectedItem( NewItem );//sends this server upstream
 			//m_GameService.SetSelectedServer( i );
 		}
 		//if ( m_GameService.m_GameServerList[i].szIPAddress == szSelSvrIP )
@@ -202,7 +197,8 @@ function GetGSServers()
 		bFirstSvr = false;
 		i++;
 	}
-	ManageToolTip("",true);
+
+	ManageToolTip("", true);
 }
 
 // JoinSelectedServerRequested() fires when a user connects to a server in the
@@ -288,22 +284,6 @@ function ShowWindow()
 		m_bJoinIPInProgress = true;
 	}
 	//END SUPER
-
-	//0.9:
-	//below will destroy old client beacon and spawn our own
-	//since we added super above, can now comment out this below
-	/*
-	if ( ( m_LanServers.m_ClientBeacon != none ) && ( !m_LanServers.m_ClientBeacon.IsA('OpenClientBeaconReceiver') ) )
-	{
-		m_LanServers.m_ClientBeacon.Destroy();
-		m_LanServers.m_ClientBeacon = none;
-	}
-	if ( m_LanServers.m_ClientBeacon == none )
-	{
-		m_LanServers.m_ClientBeacon = Root.Console.ViewportOwner.Actor.spawn(class'OpenClientBeaconReceiver');//0.8
-	}
-	m_GameService.m_ClientBeacon = m_LanServers.m_ClientBeacon;
-	*/
 }
 
 // Refresh() refreshes the list of servers. In the base game, it clears the list
@@ -327,9 +307,8 @@ function Refresh(bool bActivatedByUser)
 		return;
 	if ( ( m_LanServers.m_ClientBeacon == none ) || ( !m_LanServers.m_ClientBeacon.IsA('OpenClientBeaconReceiver') ) )
 		return;
-	//0.8
-	//get each server in the list, then query for more info
-	//0.9
+
+	//0.9: get each server in the list, then query for more info
 	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
 	while ( CurServer != none )
 	{
@@ -340,7 +319,9 @@ function Refresh(bool bActivatedByUser)
 			Timer.ClockSource = GetEntryLevel();
 		}
 		Timer.StartTimer(CurServer.szIPAddr);
-		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
+		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,
+			Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),
+			int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
 		CurServer = R6WindowListServerItem(CurServer.Next);
 	}
 }
@@ -451,7 +432,8 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 function InitServerList()
 {
 	local Font buttonFont;
-	local int iFiles,i,j;
+	local int iFiles, i, j;
+
 	// Create window for server list
 	if ( m_ServerListBox != none )
 		return;

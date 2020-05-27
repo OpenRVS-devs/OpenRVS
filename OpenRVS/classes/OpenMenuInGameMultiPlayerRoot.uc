@@ -4,7 +4,6 @@
 
 class OpenMenuInGameMultiPlayerRoot extends R6MenuInGameMultiPlayerRootWindow;
 
-var R6PlayerController PC;
 var int Count;
 var int FOV;
 var OpenFOV OpenFOV;

@@ -56,3 +56,11 @@ static function writeMsg(string s, string level, optional Object o)
 	}
 	log(s);//write remaining bytes
 }
+
+// Prints the OpenRVS startup message to the log file.
+static function LogStartupMessage()
+{
+	log("	 ---- OpenRVS ----");
+	log("	 The team: Twi, ijemafe, and Tony");
+	log("	 With thanks to chriswak, Psycho, SMC clan, and SS clan");
+}

@@ -2,6 +2,9 @@
 // The base game only uses UDP, so this is only used by us.
 // TcpLink extends InternetLink extends InternetInfo extends Info extends Actor.
 // Use Spawn(class'OpenHTTPClient') to get an instance.
+// HTTP clients store an HttpResponse, an array<string> buffer, and a reference
+// to each callback provider. These are all reused and should not be set to None
+// after use. Instead, set your HTTP client instance to None with finished.
 // WARNING: UE2 only supports HTTP 1.0; HTTP 1.1 connections won't close before
 // timing out.
 // Instructions for using OpenHTTPClient:

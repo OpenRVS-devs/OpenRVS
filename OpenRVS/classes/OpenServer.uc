@@ -8,14 +8,12 @@
 
 class OpenServer extends Actor config(BanList);
 
-var bool bLogged,bCracked;
+var bool bLogged, bCracked;
 
 //log to server to make sure it's running
 event PreBeginPlay()
 {
-	log("	 ---- OpenRVS ----");
-	log("	 The team: Twi, ijemafe, and Tony");
-	log("	 With thanks to chriswak, Psycho, SMC clan, and SS clan");
+	class'OpenLogger'.static.LogStartupMessage();
 	super.PreBeginPlay();
 	SetTimer(60,true);
 }

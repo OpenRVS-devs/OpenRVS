@@ -4,7 +4,9 @@ class OpenOptionsGame extends R6MenuOptionsGame config(openrvs);
 //add the unlimited practice button back!
 //not super useful for 99.99% of people
 
-var R6WindowButtonBox m_pOptionUnlimitedP;//commented out in vanilla
+// Called by base game, do not set to None. Commented out in vanilla.
+var R6WindowButtonBox m_pOptionUnlimitedP;
+
 var config bool bUnlimited;//need a save for this
 
 //1.56 was named InitOptionsGame()
@@ -82,7 +84,6 @@ function InitPageOptions()
 	// UNLIMITED PRATICE
 	m_pOptionUnlimitedP = R6WindowButtonBox(CreateControl(class'R6WindowButtonBox',
 		fXOffset, fYOffset, fWidth, fHeight, self));
-	//m_pOptionUnlimitedP.SetButtonBox(false);
 	//these next lines let us save the status of this box
 	LoadConfig();
 	m_pOptionUnlimitedP.SetButtonBox(bUnlimited);
@@ -125,6 +126,7 @@ function InitPageOptions()
 
 //function existed in 1.56 as SetGameValues()
 //renamed in 1.6
+// Called in R6MenuOptionsWidget which we do not override; this must be present.
 function UpdateOptionsInEngine()
 {
 	local R6GameOptions pGameOptions;
