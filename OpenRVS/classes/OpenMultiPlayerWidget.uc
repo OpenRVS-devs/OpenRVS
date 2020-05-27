@@ -317,7 +317,7 @@ function ShowWindow()
 function Refresh(bool bActivatedByUser)
 {
 	local R6WindowListServerItem CurServer;
-	
+
 	super.Refresh(bActivatedByUser);//call super first
 
 	//dont do this function if we haven't received a server list OR if the open beacon isn't loaded
@@ -336,7 +336,7 @@ function Refresh(bool bActivatedByUser)
 		//1.5 - get rough ping
 		if ( Timer == none )
 		{
-			Timer = new class'OpenTimer';//.static.New(GetEntryLevel());
+			Timer = new class'OpenTimer';
 			Timer.ClockSource = GetEntryLevel();
 		}
 		Timer.StartTimer(CurServer.szIPAddr);

@@ -25,17 +25,6 @@ var private array<Timing> Timings;
 //var OpenMultiPlayerWidget LevelSource;//provides clock
 var LevelInfo ClockSource;//provides clock
 
-// Custom constructor.
-//TODO - delete me
-//we can create an open timer with "new" and set ClockSource ourselves
-static function OpenTimer New(LevelInfo Entry)
-{
-	local OpenTimer ot;
-	ot = new class'OpenTimer';
-	ot.ClockSource = Entry;
-	return ot;
-}
-
 // Start the clock
 function StartTimer(string id)
 {
