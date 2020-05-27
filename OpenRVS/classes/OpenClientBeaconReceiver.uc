@@ -28,6 +28,8 @@ event ReceivedText(IpAddr Addr,string Text)
 	local string sNumP,sMaxP,sGMode,sMapName,sSvrName;
 	//1.3
 	local string sModName;
+	//1.5
+	local bool bSvrLocked;
 	super.ReceivedText(Addr,Text);
 	if ( left(Text,len(BeaconProduct)+1) ~= (BeaconProduct$" ") )
 	{
@@ -54,7 +56,9 @@ event ReceivedText(IpAddr Addr,string Text)
 			//1.3
 			sModName = ParseOption(szThirdWord,ModNameMarker);
 			//1.3 - sModName string added to function in MP menu
-			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName);//send received info back to server list
+			//1.5 - locked info received here
+			bSvrLocked = bool(ParseOption(szThirdWord,LockedMarker));
+			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked);//send received info back to server list
 			class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
 		}
 	}
