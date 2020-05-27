@@ -2,7 +2,8 @@
 // Example usage:
 //   var OpenTimer Timer;
 //   var int Duration;
-//   Timer = class'OpenTimer'.static.New(LevelInfo);//Level provides clock
+//   Timer = new class'OpenTimer';
+//   Timer.ClockSource = GetEntryLevel();//Level provides clock
 //   Timer.StartTimer("my-timer-id");
 //   Duration = Timer.EndTimer("my-timer-id");
 // Timer IDs are unique. Attempting to create a timer with a repeat ID will not
@@ -22,14 +23,16 @@ const ERR_VALUE = -1;
 // Timings stores all timers in the class object
 var private array<Timing> Timings;
 //var OpenMultiPlayerWidget LevelSource;//provides clock
-var LevelInfo LevelSource;//provides clock
+var LevelInfo ClockSource;//provides clock
 
 // Custom constructor.
+//TODO - delete me
+//we can create an open timer with "new" and set ClockSource ourselves
 static function OpenTimer New(LevelInfo Entry)
 {
 	local OpenTimer ot;
 	ot = new class'OpenTimer';
-	ot.LevelSource = Entry;
+	ot.ClockSource = Entry;
 	return ot;
 }
 
@@ -48,7 +51,7 @@ function StartTimer(string id)
 	}
 
 	t.ID = id;
-	t.StartTime = int(LevelSource.TimeSeconds*1000);
+	t.StartTime = int(ClockSource.TimeSeconds*1000);
 	Timings[Timings.Length] = t;//Save this timing entry.
 	class'OpenLogger'.static.Debug("started timer with id" @ t.ID @ "at time" @ t.StartTime, self);
 }
@@ -61,7 +64,7 @@ function int EndTimer(string id)
 	local int endTime;
 	local bool found;
 
-	endTime = int(LevelSource.TimeSeconds*1000);
+	endTime = int(ClockSource.TimeSeconds*1000);
 
 	// Find our timing ID
 	for ( i=0; i<Timings.Length; i++ )
@@ -88,5 +91,5 @@ function int EndTimer(string id)
 // Write the current time (in ms since level start) to the log file.
 function LogTime()
 {
-	class'OpenLogger'.static.Debug("the time is now" @ int(LevelSource.TimeSeconds*1000), self);
+	class'OpenLogger'.static.Debug("the time is now" @ int(ClockSource.TimeSeconds*1000), self);
 }

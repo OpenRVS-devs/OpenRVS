@@ -22,6 +22,9 @@ var config string ServerListURL;//0.8 server list file to load
 
 var bool bServerSuccess;//0.8 got list of servers from online provider
 
+//1.5 ping update
+var OpenTimer Timer;
+
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
 // base game, it is responsible for validating CD keys and joining Ubi.com rooms.
@@ -314,7 +317,8 @@ function ShowWindow()
 function Refresh(bool bActivatedByUser)
 {
 	local R6WindowListServerItem CurServer;
-
+	local string s;//1.5
+	
 	super.Refresh(bActivatedByUser);//call super first
 
 	//dont do this function if we haven't received a server list OR if the open beacon isn't loaded
@@ -330,6 +334,15 @@ function Refresh(bool bActivatedByUser)
 	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
 	while ( CurServer != none )
 	{
+		//1.5 - get rough ping
+		if ( Timer == none )
+		{
+			Timer = new class'OpenTimer';//.static.New(GetEntryLevel());
+			Timer.ClockSource = GetEntryLevel();
+		}
+		s = class'OpenString'.static.ReplaceText(CurServer.szIPAddr,".","");
+		s = class'OpenString'.static.ReplaceText(s,":","");
+		Timer.StartTimer(s);
 		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
 		CurServer = R6WindowListServerItem(CurServer.Next);
 	}
@@ -404,6 +417,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 {
 	local R6WindowListServerItem CurServer;
 	local int i;
+	local string s;//1.5
 
 	//0.8
 	//find the server in the list that we received info for, and update
@@ -423,6 +437,12 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			else
 				CurServer.bSameVersion = true;
 			CurServer.bLocked = bSvrLocked;//1.5 added locked here
+			//1.5 add ping
+			s = class'OpenString'.static.ReplaceText(CurServer.szIPAddr,".","");
+			s = class'OpenString'.static.ReplaceText(s,":","");
+			i = Timer.EndTimer(s);
+			if ( i != -1 )
+				CurServer.iPing = i;
 			CurServer = none;//break the while loop
 		}
 		else
