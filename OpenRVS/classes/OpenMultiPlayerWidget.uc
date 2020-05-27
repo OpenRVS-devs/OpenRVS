@@ -317,7 +317,6 @@ function ShowWindow()
 function Refresh(bool bActivatedByUser)
 {
 	local R6WindowListServerItem CurServer;
-	local string s;//1.5
 	
 	super.Refresh(bActivatedByUser);//call super first
 
@@ -340,9 +339,7 @@ function Refresh(bool bActivatedByUser)
 			Timer = new class'OpenTimer';//.static.New(GetEntryLevel());
 			Timer.ClockSource = GetEntryLevel();
 		}
-		s = class'OpenString'.static.ReplaceText(CurServer.szIPAddr,".","");
-		s = class'OpenString'.static.ReplaceText(s,":","");
-		Timer.StartTimer(s);
+		Timer.StartTimer(CurServer.szIPAddr);
 		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
 		CurServer = R6WindowListServerItem(CurServer.Next);
 	}
@@ -417,7 +414,6 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 {
 	local R6WindowListServerItem CurServer;
 	local int i;
-	local string s;//1.5
 
 	//0.8
 	//find the server in the list that we received info for, and update
@@ -438,9 +434,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 				CurServer.bSameVersion = true;
 			CurServer.bLocked = bSvrLocked;//1.5 added locked here
 			//1.5 add ping
-			s = class'OpenString'.static.ReplaceText(CurServer.szIPAddr,".","");
-			s = class'OpenString'.static.ReplaceText(s,":","");
-			i = Timer.EndTimer(s);
+			i = Timer.EndTimer(CurServer.szIPAddr);
 			if ( i != -1 )
 				CurServer.iPing = i;
 			CurServer = none;//break the while loop
