@@ -399,7 +399,8 @@ function ManageTabSelection(INT _MPTabChoiceID)
 
 //0.8 written
 //1.3 added mod keyword locking
-function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName)
+//1.5 receive locked info from specific servers, not master list
+function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked)
 {
 	local R6WindowListServerItem CurServer;
 	local int i;
@@ -421,6 +422,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 				CurServer.bSameVersion = false;
 			else
 				CurServer.bSameVersion = true;
+			CurServer.bLocked = bSvrLocked;//1.5 added locked here
 			CurServer = none;//break the while loop
 		}
 		else
