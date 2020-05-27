@@ -10,11 +10,7 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 
 ## To Do
 
-- still weird stutter when opening MP menu - LAN only!
-- further mod support? perhaps a main menu button for a new menu to toggle actor mods on/off?
-- CSV format for server list?
-- clarify HUD FOV fix issues - can make it work in Listen server too?
-- get ping from each server? - NOTE: even when latency was measured in 0.9 beta, couldn't update server list in OpenMultiPlayerWidget?
+- See GitHub issues list for the complete to-do.  Feel free to request modifications and additions there as well.
 
 ## Local Development
 
