@@ -41,10 +41,8 @@ event ReceivedText(IpAddr Addr,string Text)
 			//if we got to this stage, it's a REPORT response
 			//start szthirdword at the first symbol for GrabOption() to work
 			szThirdWord = mid(szThirdWord,InStr(szThirdWord, Chr(182)));
-			class'OpenLogger'.static.DebugLog(left(szThirdWord,20));
 			//send the string to ParseOption() with it as first argument, key to look for the second
 			//eg numplayers = ParseOption(szThirdWord,"keyfornumplayers");
-			class'OpenLogger'.static.DebugLog(mid(szThirdWord,30,50));
 			//need to overwrite GetKeyValue because it looks for "=" when we need to look for the space between the marker and the value
 			//GrabOption also leaves a space at the end as well as strips the initial symbol
 			//so need to put that symbol back on, and strip the space in GrabOption
@@ -57,7 +55,7 @@ event ReceivedText(IpAddr Addr,string Text)
 			sModName = ParseOption(szThirdWord,ModNameMarker);
 			//1.3 - sModName string added to function in MP menu
 			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName);//send received info back to server list
-			class'OpenLogger'.static.DebugLog("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP);//debug
+			class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
 		}
 	}
 }
@@ -85,12 +83,11 @@ function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUP
 			Options = Mid(Options,InStr(Options, pilcrow));//¶F1 RGM
 		else
 			Options = "";
-		class'OpenLogger'.static.DebugLog("Got option pair " $ Result);
 		return true;
 	}
 	else
 	{
-		class'OpenLogger'.static.DebugLog("GRABOPTION FALSE");
+		class'OpenLogger'.static.Debug("GRABOPTION FALSE", self);
 		return false;
 	}
 }
@@ -109,5 +106,4 @@ function GetKeyValue(string Pair,out string Key,out string Value)
 		Key   = Pair;
 		Value = "";
 	}
-	class'OpenLogger'.static.DebugLog("key " $ Key $ " returns value " $ Value);
 }

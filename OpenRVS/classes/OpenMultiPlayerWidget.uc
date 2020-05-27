@@ -58,8 +58,7 @@ function Created()
 //openserverlist handles loading the backup list and sending to this class
 function NoServerList()
 {
-	log("	 ---- OpenRVS ----");
-	log("		Loading backup file Servers.list ...");
+	class'OpenLogger'.static.Info("loading backup file Servers.list", self);
 	//bDONTQUERY = true;//0.8//commented out - we want to query backup list too
 	LoadConfig("Servers.list");
 	bServerSuccess = true;//0.8 - leave this here if we want backup server list to get queried too
@@ -124,7 +123,7 @@ function GetGSServers()
 	InitServerList();//needed here to prevent big accessed nones!
 	console = R6Console(Root.Console);
 	pLevel	= GetLevel();
-	class'OpenLogger'.static.DebugLog("CONSOLE: " $ console $ " LEVEL: " $ pLevel $ " LISTBOX: " $ m_ServerListBox);
+	class'OpenLogger'.static.Debug("CONSOLE: " $ console $ " LEVEL: " $ pLevel $ " LISTBOX: " $ m_ServerListBox, self);
 
 	// Remember IP of selected server, we sill keep this server highlighted
 	// in the list if it is still there after the list has been rebuilt.
@@ -134,7 +133,6 @@ function GetGSServers()
 	else
 		szSelSvrIP = "";
 
-	class'OpenLogger'.static.DebugLog("CLEARING");
 	m_ServerListBox.ClearListOfItems();	// Clear current list of servers
 	m_ServerListBox.m_SelectedItem = none;
 
@@ -165,33 +163,26 @@ function GetGSServers()
 	i = 0;
 	while ( i < ServerList.length )
 	{
-		class'OpenLogger'.static.DebugLog("STARTING SERVER LIST ITEM");
 		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(i,NewItem));
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
 		NewItem.bFavorite = true;
 		NewItem.bSameVersion = true;
 		NewItem.szIPAddr = ServerList[i].IP;
-		class'OpenLogger'.static.DebugLog("IP: " $ NewItem.szIPAddr);
 		NewItem.iPing = 1000;//was 1000 in early versions, at some point post 0.6 was changed to 9000?
 		NewItem.szName = ServerList[i].ServerName;
-		class'OpenLogger'.static.DebugLog("NAME: " $ NewItem.szName);
 		NewItem.szMap = "";
 		NewItem.iMaxPlayers = 0;
 		NewItem.iNumPlayers = 0;
 		NewItem.bLocked = ServerList[i].Locked;
-		class'OpenLogger'.static.DebugLog("LOCKED: " $ NewItem.bLocked);
 		NewItem.bDedicated = true;
 		NewItem.bPunkBuster = false;
-		class'OpenLogger'.static.DebugLog("MAP NAME LOC");
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
-		class'OpenLogger'.static.DebugLog("GAME TYPE LOC");
 		NewItem.szGameType = "";
 		if ( InStr(caps(ServerList[i].GameMode),"ADV") != -1 )
 			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
 		else
 			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
-		class'OpenLogger'.static.DebugLog("MODE: " $ NewItem.szGameMode);
 		// If selected server is still in list, reset this item
 		// to be the selcted server.	By default the selected server will
 		// be the first server in the list.
@@ -207,9 +198,7 @@ function GetGSServers()
 
 		bFirstSvr = false;
 		i++;
-		class'OpenLogger'.static.DebugLog("FINISHED SERVER LIST ITEM");
 	}
-	class'OpenLogger'.static.DebugLog("DONE");
 	ManageToolTip("",true);
 }
 
@@ -246,10 +235,10 @@ function ShowWindow()
 	//but then replace the created client beacon with our own
 	//0.9 fix: copy all super into this function and eliminate super call
 	//super.ShowWindow();//0.9 - lag fix
+	local string _szIpAddress;
+	class'OpenLogger'.static.Debug("user opened mp menu", self);
 
 	//BELOW IS FROM SUPER!
-	local string _szIpAddress;
-
 	//important line from 1.6 - not present in 1.56!
 	//without this, will hang permanently on please wait
 	R6MenuRootWindow(Root).m_pMenuCDKeyManager.SetWindowUser(MultiPlayerWidgetID,self);//root.15 is the UTPT version
@@ -352,60 +341,60 @@ function Refresh(bool bActivatedByUser)
 // Copied directly and commented out additional refreshes.
 function ManageTabSelection(INT _MPTabChoiceID)
 {
-    switch(_MPTabChoiceID)
-    {
-        case MultiPlayerTabID.TAB_Lan_Server:
-            m_ConnectionTab = TAB_Lan_Server;
-            //if ( m_LanServers.m_GameServerList.length == 0 )
-            //    Refresh( FALSE );
-            GetLanServers();
-            GetServerInfo( m_LanServers );
-            UpdateServerFilters();
+	switch(_MPTabChoiceID)
+	{
+		case MultiPlayerTabID.TAB_Lan_Server:
+			m_ConnectionTab = TAB_Lan_Server;
+			//if ( m_LanServers.m_GameServerList.length == 0 )
+			//	Refresh( FALSE );
+			GetLanServers();
+			GetServerInfo( m_LanServers );
+			UpdateServerFilters();
 			m_iLastTabSel = MultiPlayerTabID.TAB_Lan_Server;
 			SaveConfig();
-            break;
-        case MultiPlayerTabID.TAB_Internet_Server:
-            m_ConnectionTab = TAB_Internet_Server;
-            m_LoginSuccessAction = eLSAct_InternetTab;
-            m_pLoginWindow.StartLogInProcedure(self);
-            //if ( m_GameService.m_GameServerList.length == 0 )
-            //    Refresh( FALSE );
-            GetGSServers();
-            UpdateServerFilters();
+			break;
+		case MultiPlayerTabID.TAB_Internet_Server:
+			m_ConnectionTab = TAB_Internet_Server;
+			m_LoginSuccessAction = eLSAct_InternetTab;
+			m_pLoginWindow.StartLogInProcedure(self);
+			//if ( m_GameService.m_GameServerList.length == 0 )
+			//	Refresh( FALSE );
+			GetGSServers();
+			UpdateServerFilters();
 			m_iLastTabSel = MultiPlayerTabID.TAB_Internet_Server;
 			SaveConfig();
-            break;
-        case MultiPlayerTabID.TAB_Game_Mode:
-            m_FilterTab = TAB_Game_Mode;
-            m_ServerInfoPlayerBox.HideWindow();
-            m_ServerInfoMapBox.HideWindow();
-            m_ServerInfoOptionsBox.HideWindow();
-            m_pSecondWindow.HideWindow();
-            m_pSecondWindowGameMode.ShowWindow();
-            m_pSecondWindow = m_pSecondWindowGameMode;
-            break;
-        case MultiPlayerTabID.TAB_Tech_Filter:
-            m_FilterTab = TAB_Tech_Filter;
-            m_ServerInfoPlayerBox.HideWindow();
-            m_ServerInfoMapBox.HideWindow();
-            m_ServerInfoOptionsBox.HideWindow();
-            m_pSecondWindow.HideWindow();
-            m_pSecondWindowFilter.ShowWindow();
-            m_pSecondWindow = m_pSecondWindowFilter;
-            break;
-        case MultiPlayerTabID.TAB_Server_Info:
-            m_FilterTab = TAB_Server_Info;
+			break;
+		case MultiPlayerTabID.TAB_Game_Mode:
+			m_FilterTab = TAB_Game_Mode;
+			m_ServerInfoPlayerBox.HideWindow();
+			m_ServerInfoMapBox.HideWindow();
+			m_ServerInfoOptionsBox.HideWindow();
+			m_pSecondWindow.HideWindow();
+			m_pSecondWindowGameMode.ShowWindow();
+			m_pSecondWindow = m_pSecondWindowGameMode;
+			break;
+		case MultiPlayerTabID.TAB_Tech_Filter:
+			m_FilterTab = TAB_Tech_Filter;
+			m_ServerInfoPlayerBox.HideWindow();
+			m_ServerInfoMapBox.HideWindow();
+			m_ServerInfoOptionsBox.HideWindow();
+			m_pSecondWindow.HideWindow();
+			m_pSecondWindowFilter.ShowWindow();
+			m_pSecondWindow = m_pSecondWindowFilter;
+			break;
+		case MultiPlayerTabID.TAB_Server_Info:
+			m_FilterTab = TAB_Server_Info;
 			m_pSecondWindow.HideWindow();
 			m_pSecondWindowServerInfo.ShowWindow();
 			m_ServerInfoPlayerBox.ShowWindow();
 			m_ServerInfoMapBox.ShowWindow();
 			m_ServerInfoOptionsBox.ShowWindow();
 			m_pSecondWindow = m_pSecondWindowServerInfo;
-            break;
-        default:
-            log("This tab was not supported (OpenMultiPlayerWidget)");
-            break;
-    }
+			break;
+		default:
+			class'OpenLogger'.static.Warning("This tab was not supported (OpenMultiPlayerWidget)", self);
+			break;
+	}
 }
 
 //0.8 written
@@ -414,7 +403,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 {
 	local R6WindowListServerItem CurServer;
 	local int i;
-	class'OpenLogger'.static.DebugLog("Server " $ sSvrName $ " at " $ sIP $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ iNumP $ "/" $ iMaxP);
+
 	//0.8
 	//find the server in the list that we received info for, and update
 	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
@@ -428,7 +417,6 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			CurServer.szGameType = GetLevel().GetGameNameLocalization(sGMode);
 			CurServer.szMap = sMapName;
 			//1.3 - grey out version if not the right mod
-			class'OpenLogger'.static.DebugLog(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord@sModName);
 			if ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) )
 				CurServer.bSameVersion = false;
 			else

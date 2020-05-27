@@ -41,8 +41,7 @@ function Tick(float delta)
 		{
 			if ( !bLogged )
 			{
-				log("	 ---- OpenRVS ----");
-				log("	 Current Status:  Validating players");
+				class'OpenLogger'.static.Info("Current Status: Validating players", self);
 				bLogged = true;
 			}
 			//THE IMPORTANT STUFF
@@ -55,12 +54,10 @@ function Tick(float delta)
 			P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus = ECDKEYST_PLAYER_VALID;
 			if ( HandleBans(P) )//PLAYER IS BANNED VIA IP ADDRESS
 			{
-				log("	 ---- OpenRVS ----");
-				log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address");
+				class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address", self);
 				P.ClientMessage("Your IP address is banned on this server");
 				P.ClientKickedOut();
 				P.SpecialDestroy();
-				class'OpenLogger'.static.DebugLog("PLAYER BANNED");
 			}
 		}
 		//1.2:
@@ -99,15 +96,15 @@ function bool HandleBans(R6PlayerController P)
 	//log each player's IP address
 	//TO DO:
 	//log the time of joining as well
-	log("	 Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is: " $ left(s,InStr(s,":")));
-	class'OpenLogger'.static.DebugLog("PLAYER ID IS: " $ P.m_szGlobalID);
+	class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is:" @ left(s,InStr(s,":")), self);
+	class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
 		if ( Level.Game.AccessControl.Banned[i] ~= Left(P.m_szGlobalID,Len(Level.Game.AccessControl.Banned[i])) )
 			return true;
 		i++;
 	}
-	class'OpenLogger'.static.DebugLog("PLAYER NOT BANNED");
+	class'OpenLogger'.static.Info("PLAYER NOT BANNED", self);
 	return false;
 }
 

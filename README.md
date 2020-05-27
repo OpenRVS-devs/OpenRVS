@@ -8,6 +8,14 @@ By the OpenRVS team:
 
 A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
+## To Do
+
+- still weird stutter when opening MP menu - LAN only!
+- further mod support? perhaps a main menu button for a new menu to toggle actor mods on/off?
+- CSV format for server list?
+- clarify HUD FOV fix issues - can make it work in Listen server too?
+- get ping from each server? - NOTE: even when latency was measured in 0.9 beta, couldn't update server list in OpenMultiPlayerWidget?
+
 ## Local Development
 
 **Note: You must test your changes using this process BEFORE opening a pull request!**
@@ -28,15 +36,14 @@ Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile cha
 
 In order to enable debug logging, edit `OpenLogger.uc` and change `false` to `true` where instructed.
 
-## To Do
+## OpenRVS Libraries
 
-- still weird stutter when opening MP menu - LAN only!
-- further mod support? perhaps a main menu button for a new menu to toggle actor mods on/off?
-- CSV format for server list?
-- clarify HUD FOV fix issues - can make it work in Listen server too?
-- implement MOTD in server beacon? in place of PB probably?
-- remove locked from the info we initially request from servers? useless - will be received with a pre join inquiry
-- get ping from each server? - NOTE: even when latency was measured in 0.9 beta, couldn't update server list in OpenMultiPlayerWidget?
+We have included a number of reusable UnrealScript2 libraries in OpenRVS:
+
+- OpenLogger.uc: For writing OpenRVS logs to system\ravenshield.log
+- OpenString.uc: For common operations like Split() and RemoveQuotes()
+- OpenTimer.uc: For measuring how long things take to execute
+- OpenHTTPClient.uc: For sending HTTP requests and reading responses
 
 ## Version History
 

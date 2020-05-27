@@ -1,7 +1,6 @@
 //fools the UBI ID window into thinking you successfully logged in
 //so you can select the Internet tab without any problems
 //installed client side
-
 class OpenUbiLogIn extends R6WindowUbiLogIn;
 
 //in 1.56 this is done in function Manager()
@@ -13,5 +12,5 @@ function ProcessGSMsg (string _szMsg)
 	HideWindow();
 	m_GameService.SaveConfig();
 	m_pSendMessageDest.SendMessage(MWM_UBI_LOGIN_SUCCESS);
-	class'OpenLogger'.static.DebugLog("SUCCESSFULLY FAKED UBI LOGIN");
+	class'OpenLogger'.static.Debug("SUCCESSFULLY FAKED UBI LOGIN", self);
 }
