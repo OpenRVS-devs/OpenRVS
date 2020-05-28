@@ -538,6 +538,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 				}
 			}
 		}
+		GetGSServers();//forces a rebuild in the menu list items based on our resorted ServerList array
 	}
 	else
 		super.ResortServerList(iCategory,_bAscending);
