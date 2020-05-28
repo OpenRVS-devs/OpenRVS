@@ -9,6 +9,9 @@
 // Timer IDs are unique. Attempting to create a timer with a repeat ID will not
 // overwrite the existing timer (reusing its start time).
 // When a Timer is ended, its data is deleted from the set.
+// Timers store an array of Timings and a copy of the current level. These are
+// both reused and should not be set to None after use. Instead, set your Timer
+// instance to None when finished with timings.
 class OpenTimer extends Object;
 
 // Timing correlates a start time with a user-provided ID
@@ -22,8 +25,7 @@ const ERR_VALUE = -1;
 
 // Timings stores all timers in the class object
 var private array<Timing> Timings;
-//var OpenMultiPlayerWidget LevelSource;//provides clock
-var LevelInfo ClockSource;//provides clock
+var LevelInfo ClockSource;
 
 // Start the clock
 function StartTimer(string id)

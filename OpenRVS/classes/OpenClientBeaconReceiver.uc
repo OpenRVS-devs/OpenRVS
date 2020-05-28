@@ -1,12 +1,11 @@
-class OpenClientBeaconReceiver extends ClientBeaconReceiver transient;
-
 //new in 0.8
 //this class will handle receiving text from each server and parsing it to learn basic info about the server
+class OpenClientBeaconReceiver extends ClientBeaconReceiver transient;
 
 var OpenMultiPlayerWidget Widget;
 
 //call this function with the ip and server beacon port (regular port + 1000) of the server to get info from
-function QuerySingleServer(OpenMultiPlayerWidget OMPW,coerce string sIP,coerce int sPort)
+function QuerySingleServer(OpenMultiPlayerWidget OMPW, coerce string sIP, coerce int sPort)
 {
 	local IpAddr Addr;
 	if ( Widget == none )//get a reference to the widget to send info back to
@@ -20,17 +19,17 @@ function QuerySingleServer(OpenMultiPlayerWidget OMPW,coerce string sIP,coerce i
 //receive text
 //super it but also check if it's response to the "REPORT" broadcast
 //if so, parse and send to OpenMultiPlayerWidget
-event ReceivedText(IpAddr Addr,string Text)
+event ReceivedText(IpAddr Addr, string Text)
 {
-	local int pos;			   // Position in the current string
-	local string szSecondWord;	  // The second word in the message
-	local string szThirdWord;	   // The third word in the message
+	local int pos;//position in the current string
+	local string szSecondWord;//second word in the message
+	local string szThirdWord;//third word in the message
 	local string sNumP,sMaxP,sGMode,sMapName,sSvrName;
-	//1.3
-	local string sModName;
-	//1.5
-	local bool bSvrLocked;
+	local string sModName;//1.3
+	local bool bSvrLocked;//1.5
+
 	super.ReceivedText(Addr,Text);
+
 	if ( left(Text,len(BeaconProduct)+1) ~= (BeaconProduct$" ") )
 	{
 		// Decode the second word to determine the port number of the server
@@ -53,11 +52,8 @@ event ReceivedText(IpAddr Addr,string Text)
 			sGMode = ParseOption(szThirdWord,GameTypeMarker);
 			sMapName = ParseOption(szThirdWord,MapNameMarker);
 			sSvrName = ParseOption(szThirdWord,SvrNameMarker);
-			//1.3
-			sModName = ParseOption(szThirdWord,ModNameMarker);
-			//1.3 - sModName string added to function in MP menu
-			//1.5 - locked info received here
-			bSvrLocked = bool(ParseOption(szThirdWord,LockedMarker));
+			sModName = ParseOption(szThirdWord,ModNameMarker);//1.3 - sModName string added to function in MP menu
+			bSvrLocked = bool(ParseOption(szThirdWord,LockedMarker));//1.5 - locked info received here
 			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked);//send received info back to server list
 			class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
 		}
@@ -67,7 +63,7 @@ event ReceivedText(IpAddr Addr,string Text)
 //overridden from parent
 //need to strip out the final space from result
 //also need to add the removed symbol back into result
-function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
+function bool GrabOption(out string Options, out string Result)//¶I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
 {
 	local string pilcrow;
 	pilcrow = Chr(182);//¶
@@ -78,7 +74,6 @@ function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUP
 		Result = Mid(Options,1);
 		if( InStr(Result, pilcrow) >= 0 )//I1 OBSOLETESUPERSTARS.COM ¶F1 RGM
 			Result = Left(Result,InStr(Result, pilcrow)-1);//I1 OBSOLETESUPERSTARS.COM//0.8 strip the space
-			//Result = Left(Result,InStr(Result,"¶"));//I1 OBSOLETESUPERSTARS.COM
 		Result = pilcrow $ Result;//0.8 add the symbol back in - ¶I1 OBSOLETESUPERSTARS.COM
 
 		// Update options.
@@ -98,7 +93,7 @@ function bool GrabOption(out string Options,out string Result)//¶I1 OBSOLETESUP
 
 //overridden from parent
 //instead of looking for "=", need to look for first space
-function GetKeyValue(string Pair,out string Key,out string Value)
+function GetKeyValue(string Pair, out string Key, out string Value)
 {
 	if ( InStr(Pair," ") >= 0 )
 	{
