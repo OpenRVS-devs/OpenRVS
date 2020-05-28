@@ -14,7 +14,7 @@
 //    file.
 // 2. Add the name of your callback as a const in this class.
 // 3. Add a reference to your callback provider as a var in this class.
-// 4. Register your callback in the switch statement under Closed() in this class.
+// 4. Register your callback in the switch statement in triggerCallbacks().
 // 5. After spawning the client, set c.CallbackName = "your_callback" and set
 //    c.YourCallbackProvider = class. Then you can call c.SendRequest() and
 //    receive the data in your callback provider.
@@ -73,9 +73,11 @@ event Resolved(IpAddr Addr)
 event ResolveFailed()
 {
 	super.ResolveFailed();
-	super.Destroy();//clean up the connection
 
 	class'OpenLogger'.static.Error("dns resolution failed", self);
+	triggerCallbacks();//caller still needs to process a result
+
+	super.Destroy();//clean up the connection
 }
 
 // Opened: Called when socket successfully connects.
@@ -134,25 +136,7 @@ event Closed()
 	if (Response.Code != 200)//warn and continue
 		class'OpenLogger'.static.Warning("http request failed with code" @ Response.Code, self);
 
-	if (CallbackName == "")
-	{
-		class'OpenLogger'.static.Debug("callback name was empty", self);
-		return;//nothing to do
-	}
-	switch (CallbackName)
-	{
-		// Register new callbacks here.
-		case CALLBACK_SERVER_LIST:
-			class'OpenLogger'.static.Debug("calling ServerListCallback", self);
-			ServerListCallback(Response);
-			break;
-		default:
-			class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
-			break;
-	}
-
-	// Reset and release the HTTP client for the next request.
-	resetHttpClient();
+	triggerCallbacks();
 }
 
 //
@@ -160,7 +144,7 @@ event Closed()
 //
 
 // SendRequest() sends an HTTP request to the given URL. The response can be
-// passed to your code in Closed(). Returns true on success.
+// passed to your code in triggerCallbacks(). Returns true on success.
 function bool SendRequest(string url)
 {
 	local ParsedURL parsed;
@@ -194,6 +178,29 @@ function bool SendRequest(string url)
 	Resolve(parsed.Host);
 
 	return true;
+}
+
+// Fires any matching callbacks. Register new callbacks here.
+private function triggerCallbacks()
+{
+	if (CallbackName == "")
+	{
+		class'OpenLogger'.static.Debug("callback name was empty", self);
+		return;//nothing to do
+	}
+	switch (CallbackName)
+	{
+		// Register new callbacks here.
+		case CALLBACK_SERVER_LIST:
+			class'OpenLogger'.static.Debug("calling ServerListCallback", self);
+			ServerListCallback(Response);
+			break;
+		default:
+			class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
+			break;
+	}
+
+	resetHttpClient();//all done, get ready for next request
 }
 
 // Resets and unlocks the instance to be used for the next request.
@@ -291,5 +298,5 @@ private static function HttpResponse parseHttpResponse(string response)
 		class'OpenLogger'.static.Debug("ServerListCallbackProvider was none", self);
 		return;//nothing to do
 	}
-	ServerListCallbackProvider.ParseServersINI(resp);
+	ServerListCallbackProvider.ParseServers(resp);
 }
