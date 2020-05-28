@@ -169,7 +169,7 @@ function GetGSServers()
 		NewItem.bFavorite = true;
 		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change
 		NewItem.szIPAddr = ServerList[i].IP;
-		if ( ( ServerList[i].iPing != 0 ) && ( ServerList[i].iPing != -1 ) && ( ServerList[i].iPing != 1000 ) )//1.5 change
+		if ( ( ServerList[i].iPing > 0 ) && ( ServerList[i].iPing != 1000 ) )//1.5 change
 			NewItem.iPing = ServerList[i].iPing;
 		else
 		{
@@ -178,7 +178,7 @@ function GetGSServers()
 		}
 		NewItem.szName = ServerList[i].ServerName;
 		NewItem.szMap = ServerList[i].szMap;//"";//1.5 change
-		if ( ServerList[i].iMaxPlayers == 0 )//1.5 change
+		if ( ServerList[i].iMaxPlayers == 0 )//1.5 change - server hasn't responded yet if maxplayers is still 0
 		{
 			//for sorting: servers that didn't respond sort the same as servers with 0 players
 			//so set num players in the array as -1 to sort worse
@@ -315,7 +315,6 @@ function ShowWindow()
 // 0.8: should let refresh button also update player counts
 function Refresh(bool bActivatedByUser)
 {
-//	local R6WindowListServerItem CurServer;
 	local bool bFound;//1.5 - prevent multiple open queries
 	local int i,j;
 
@@ -364,7 +363,6 @@ function Refresh(bool bActivatedByUser)
 				int(Mid(ServerList[j].IP,InStr(ServerList[j].IP,":")+1))+1000);
 		}
 		j++;
-		//CurServer = R6WindowListServerItem(CurServer.Next);
 	}
 }
 
@@ -375,35 +373,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 {
 	local R6WindowListServerItem CurServer;
 	local int i,iTime;
-/*
-	//0.8
-	//find the server in the list that we received info for, and update
-	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
-	while ( CurServer != none )
-	{
-		if ( CurServer.szIPAddr == sIP )
-		{
-			CurServer.iMaxPlayers = iMaxP;
-			CurServer.iNumPlayers = iNumP;
-			CurServer.szName = sSvrName;
-			CurServer.szGameType = GetLevel().GetGameNameLocalization(sGMode);
-			CurServer.szMap = sMapName;
-			//1.3 - grey out version if not the right mod
-			if ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) )
-				CurServer.bSameVersion = false;
-			else
-				CurServer.bSameVersion = true;
-			CurServer.bLocked = bSvrLocked;//1.5 added locked here
-			//1.5 add ping
-			i = Timer.EndTimer(CurServer.szIPAddr);
-			if ( i != -1 )
-				CurServer.iPing = i / 2;//divide by two for single-trip time - consistent with how Ubi used to measure
-			CurServer = none;//break the while loop
-		}
-		else
-		CurServer = R6WindowListServerItem(CurServer.Next);
-	}*/
-	
+
 	//1.5
 	//modify the servers array rather than the list items
 	//then rebuild list items with GetGSServers()
@@ -464,7 +434,7 @@ function InitServerList()
 //calls super if in LAN tab - use the built-in native functions for LAN
 function ResortServerList(int iCategory, bool _bAscending)
 {
-	local int i,j;
+	local int i,j;//indices for iterating ServerList
 	local bool bSwap;
 	local int iListSize;
 	local AServer temp;
@@ -472,76 +442,76 @@ function ResortServerList(int iCategory, bool _bAscending)
 	local int iCompare1,iCompare2;
 	local bool bIntComp;
 
-	if ( m_ConnectionTab != TAB_Lan_Server )
+	if ( m_ConnectionTab == TAB_Lan_Server )
 	{
-		m_iLastSortCategory = iCategory;
-		m_bLastTypeOfSort = _bAscending;
-		iListSize = ServerList.length;
-		for ( i = 0; i < iListSize - 1; i++ )
+		super.ResortServerList(iCategory,_bAscending);
+		return;
+	}
+	m_iLastSortCategory = iCategory;
+	m_bLastTypeOfSort = _bAscending;
+	iListSize = ServerList.length;
+	for ( i = 0; i < iListSize - 1; i++ )
+	{
+		for ( j = 0; j < iListSize - 1 - i; j++ )
 		{
-			for ( j = 0; j < iListSize - 1 - i; j++ )
+			bIntComp = false;
+			bSwap = false;
+			switch ( iCategory )
 			{
-				bIntComp = false;
-				bSwap = false;
-				switch ( iCategory )
-				{
-					case 1://locked
-						sCompare1 = string(ServerList[j].Locked);
-						sCompare2 = string(ServerList[j+1].Locked);
-						break;
-					case 5://name
-						sCompare1 = ServerList[j].ServerName;
-						sCompare2 = ServerList[j+1].ServerName;
-						break;
-					case 6://game type
-						sCompare1 = ServerList[j].szGameType;
-						sCompare2 = ServerList[j+1].szGameType;
-						break;
-					case 7://game mode
-						sCompare1 = ServerList[j].GameMode;
-						sCompare2 = ServerList[j+1].GameMode;
-						break;
-					case 8://map name
-						sCompare1 = ServerList[j].szMap;
-						sCompare2 = ServerList[j+1].szMap;
-						break;
-					case 9://num players
-						bIntComp = true;
-						iCompare1 = ServerList[j].iNumPlayers;
-						iCompare1 = ServerList[j+1].iNumPlayers;
-						break;
-					default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server
-						bIntComp = true;
-						iCompare1 = ServerList[j].iPing;
-						iCompare2 = ServerList[j+1].iPing;
-						break;
-				}
-				if ( bIntComp )//compare int sizes
-				{
-					if ( _bAscending )
-						bSwap =  iCompare1 > iCompare2;
-					else
-						bSwap =  iCompare1 < iCompare2;
-				}
-				else//compare strings
-				{
-					if ( _bAscending )
-						bSwap =  sCompare1 > sCompare2;
-					else
-						bSwap =  sCompare1 < sCompare2;
-				}
-				if ( bSwap )
-				{
-					temp = ServerList[j];
-					ServerList[j] = ServerList[j + 1];
-					ServerList[j + 1] = temp;
-				}
+				case 1://locked
+					sCompare1 = string(ServerList[j].Locked);
+					sCompare2 = string(ServerList[j+1].Locked);
+					break;
+				case 5://name
+					sCompare1 = ServerList[j].ServerName;
+					sCompare2 = ServerList[j+1].ServerName;
+					break;
+				case 6://game type
+					sCompare1 = ServerList[j].szGameType;
+					sCompare2 = ServerList[j+1].szGameType;
+					break;
+				case 7://game mode
+					sCompare1 = ServerList[j].GameMode;
+					sCompare2 = ServerList[j+1].GameMode;
+					break;
+				case 8://map name
+					sCompare1 = ServerList[j].szMap;
+					sCompare2 = ServerList[j+1].szMap;
+					break;
+				case 9://num players
+					bIntComp = true;
+					iCompare1 = ServerList[j].iNumPlayers;
+					iCompare1 = ServerList[j+1].iNumPlayers;
+					break;
+				default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server
+					bIntComp = true;
+					iCompare1 = ServerList[j].iPing;
+					iCompare2 = ServerList[j+1].iPing;
+					break;
+			}
+			if ( bIntComp )//compare int sizes
+			{
+				if ( _bAscending )
+					bSwap =  iCompare1 > iCompare2;
+				else
+					bSwap =  iCompare1 < iCompare2;
+			}
+			else//compare strings
+			{
+				if ( _bAscending )
+					bSwap =  sCompare1 > sCompare2;
+				else
+					bSwap =  sCompare1 < sCompare2;
+			}
+			if ( bSwap )
+			{
+				temp = ServerList[j];
+				ServerList[j] = ServerList[j + 1];
+				ServerList[j + 1] = temp;
 			}
 		}
-		GetGSServers();//forces a rebuild in the menu list items based on our resorted ServerList array
 	}
-	else
-		super.ResortServerList(iCategory,_bAscending);
+	GetGSServers();//forces a rebuild in the menu list items based on our resorted ServerList array
 }
 
 // ManageTabSelection() performs various actions when a user changes the tab in
