@@ -14,15 +14,18 @@ struct AServer
 	var string IP;
 	var bool Locked;
 	var string GameMode;
+	var int iMaxPlayers,iNumPlayers;//1.5 - max players/current players
+	var string szGameType;//1.5 - localized game mode name
+	var string szMap;//1.5 - map name
+	var bool bWrongVersion;//1.5 - running same expansion mod - for future use? - needs to be inverted so only true value will trigger changing the menu
+	var int iPing;//1.5 - ping
 };
 var array<AServer> ServerList;//1.3 - not config - config is now in openserverlist, which handles loading the backup list
 var config string ServerURL;//0.8 server list URL to load
 var config string ServerListURL;//0.8 server list file to load
-
 var bool bServerSuccess;//0.8 got list of servers from online provider
-
-//1.5 ping update
-var OpenTimer Timer;
+var array<string> OpenQueries;//1.5 keep track of servers we've queried
+var OpenTimer Timer;//1.5 ping update
 
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
@@ -86,6 +89,7 @@ function AddServerToList(string sn, string sip, string sm)
 	Temp.ServerName = sn;
 	Temp.IP = sip;
 	Temp.GameMode = sm;
+	Temp.iPing = 1000;//1.5 - don't let iPing initialize with null value of 0 - for sorting. If server responds, this value will be set to actual ping
 	ServerList[ServerList.length] = Temp;
 }
 
@@ -120,8 +124,7 @@ function GetGSServers()
 
 	InitServerList();//needed here to prevent big accessed nones!
 	console = R6Console(Root.Console);
-	pLevel	= GetLevel();
-	class'OpenLogger'.static.Debug("CONSOLE: " $ console $ " LEVEL: " $ pLevel $ " LISTBOX: " $ m_ServerListBox, self);
+	pLevel = GetLevel();
 
 	// Remember IP of selected server, we sill keep this server highlighted
 	// in the list if it is still there after the list has been rebuilt.
@@ -164,19 +167,19 @@ function GetGSServers()
 		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(i,NewItem));
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
-		NewItem.bFavorite = true;
-		NewItem.bSameVersion = true;
+		NewItem.bFavorite = true;//todo - favorite servers
+		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
 		NewItem.szIPAddr = ServerList[i].IP;
-		NewItem.iPing = 1000;//was 1000 in early versions, at some point post 0.6 was changed to 9000?
+		NewItem.iPing = ServerList[i].iPing;
 		NewItem.szName = ServerList[i].ServerName;
-		NewItem.szMap = "";
-		NewItem.iMaxPlayers = 0;
-		NewItem.iNumPlayers = 0;
+		NewItem.szMap = ServerList[i].szMap;//"";//1.5 change
+		NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
+		NewItem.iNumPlayers = ServerList[i].iNumPlayers;
 		NewItem.bLocked = ServerList[i].Locked;
-		NewItem.bDedicated = true;
+		NewItem.bDedicated = true;//todo: grab dedicated info from client beacon receiver
 		NewItem.bPunkBuster = false;
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
-		NewItem.szGameType = "";
+		NewItem.szGameType = ServerList[i].szGameType;//"";//1.5 change
 		if ( InStr(caps(ServerList[i].GameMode),"ADV") != -1 )
 			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
 		else
@@ -296,7 +299,8 @@ function ShowWindow()
 // 0.8: should let refresh button also update player counts
 function Refresh(bool bActivatedByUser)
 {
-	local R6WindowListServerItem CurServer;
+	local bool bFound;//1.5 - prevent multiple open queries
+	local int i,j;
 
 	super.Refresh(bActivatedByUser);//call super first
 
@@ -308,22 +312,192 @@ function Refresh(bool bActivatedByUser)
 	if ( ( m_LanServers.m_ClientBeacon == none ) || ( !m_LanServers.m_ClientBeacon.IsA('OpenClientBeaconReceiver') ) )
 		return;
 
+	//1.5 - if initiated by user, clear the list of current queries and start fresh
+	if ( bActivatedByUser )
+		OpenQueries.remove(0,OpenQueries.length);
 	//0.9: get each server in the list, then query for more info
-	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
-	while ( CurServer != none )
+	//1.5 - query ServerList instead
+	j = 0;
+	while ( j < ServerList.length )
 	{
-		//1.5 - get rough ping
-		if ( Timer == none )
+		i = 0;
+		bFound = false;
+		ServerList[j].iPing = 1000;//set to 1000 so if server doesn't respond this time, it will sort to the bottom of the list
+		//1.5 - only one open query to a server at a time
+		while ( i < OpenQueries.length )
 		{
-			Timer = new class'OpenTimer';
-			Timer.ClockSource = GetEntryLevel();
+			if ( OpenQueries[i] == ServerList[j].IP )//aleady have query open
+			{
+				bFound = true;
+				break;
+			}
+			i++;
 		}
-		Timer.StartTimer(CurServer.szIPAddr);
-		OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,
-			Left(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")),
-			int(Mid(CurServer.szIPAddr,InStr(CurServer.szIPAddr,":")+1))+1000);
-		CurServer = R6WindowListServerItem(CurServer.Next);
+		if ( !bFound )
+		{
+			OpenQueries[OpenQueries.length] = ServerList[j].IP;
+			//1.5 - get rough ping
+			if ( Timer == none )
+			{
+				Timer = new class'OpenTimer';
+				Timer.ClockSource = GetLevel();
+			}
+			Timer.StartTimer(ServerList[j].IP);
+			OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,
+				Left(ServerList[j].IP,InStr(ServerList[j].IP,":")),
+				int(Mid(ServerList[j].IP,InStr(ServerList[j].IP,":")+1))+1000);
+		}
+		j++;
 	}
+}
+
+//0.8 written
+//1.3 added mod keyword locking
+//1.5 receive locked info from specific servers, not master list
+function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked)
+{
+	local R6WindowListServerItem CurServer;
+	local int i,iTime;
+
+	//1.5
+	//modify the servers array rather than the list items
+	//then rebuild list items with GetGSServers()
+	i = 0;
+	while ( i < OpenQueries.length )
+	{
+		if ( OpenQueries[i] == sIP )//close open query
+		{
+			OpenQueries.remove(i,1);
+			break;
+		}
+		i++;
+	}
+	i = 0;
+	while ( i < ServerList.length )
+	{
+		if ( ServerList[i].IP == sIP )
+		{
+			ServerList[i].ServerName = sSvrName;
+			ServerList[i].Locked = bSvrLocked;
+			ServerList[i].iMaxPlayers = iMaxP;
+			ServerList[i].iNumPlayers = iNumP;
+			ServerList[i].szGameType = GetLevel().GetGameNameLocalization(sGMode);
+			ServerList[i].szMap = sMapName;
+			ServerList[i].bWrongVersion = ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) );
+			iTime = Timer.EndTimer(sIP);
+			if ( iTime != -1 )
+				ServerList[i].iPing = iTime / 2;//divide by two for single-trip time - consistent with how Ubi used to measure
+		}
+		i++;
+	}
+	GetGSServers();
+}
+
+// InitServerList() creates a window for the server list. It is called by
+// ShowWindow(). In our version, we are able to override the server ping timeout.
+// Overrides the matching function in R6MenuMultiPlayerWidget.
+// 1.3: fixed access none
+function InitServerList()
+{
+	local Font buttonFont;
+	local int iFiles, i, j;
+
+	// Create window for server list
+	if ( m_ServerListBox != none )
+		return;
+	m_ServerListBox = R6WindowServerListBox(CreateWindow(class'R6WindowServerListBox',K_XSTARTPOS_NOBORDER,K_YPOS_FIRST_TABWINDOW,K_WINDOWWIDTH_NOBORDER,K_FFIRST_WINDOWHEIGHT,self));
+	m_ServerListBox.Register( m_pFirstTabManager);
+	m_ServerListBox.SetCornerType(No_Borders);
+	m_ServerListBox.m_Font = Root.Fonts[F_ListItemSmall];
+	if ( m_LanServers != none )//accessed none fix?
+		m_ServerListBox.m_iPingTimeOut = m_LanServers.NativeGetPingTimeOut();
+	else
+		m_ServerListBox.m_iPingTimeOut = 10000;
+}
+
+//sorting update 1.5
+//calls super if in LAN tab - use the built-in native functions for LAN
+function ResortServerList(int iCategory, bool _bAscending)
+{
+	local int i,j;//indices for iterating ServerList
+	local bool bSwap;
+	local int iListSize;
+	local AServer temp;
+	local string sCompare1,sCompare2;
+	local int iCompare1,iCompare2;
+	local bool bIntComp;
+
+	if ( m_ConnectionTab == TAB_Lan_Server )
+	{
+		super.ResortServerList(iCategory,_bAscending);
+		return;
+	}
+	m_iLastSortCategory = iCategory;
+	m_bLastTypeOfSort = _bAscending;
+	iListSize = ServerList.length;
+	for ( i = 0; i < iListSize - 1; i++ )
+	{
+		for ( j = 0; j < iListSize - 1 - i; j++ )
+		{
+			bIntComp = false;
+			bSwap = false;
+			switch ( iCategory )
+			{
+				case 1://locked
+					sCompare1 = string(ServerList[j].Locked);
+					sCompare2 = string(ServerList[j+1].Locked);
+					break;
+				case 5://name
+					sCompare1 = ServerList[j].ServerName;
+					sCompare2 = ServerList[j+1].ServerName;
+					break;
+				case 6://game type
+					sCompare1 = ServerList[j].szGameType;
+					sCompare2 = ServerList[j+1].szGameType;
+					break;
+				case 7://game mode
+					sCompare1 = ServerList[j].GameMode;
+					sCompare2 = ServerList[j+1].GameMode;
+					break;
+				case 8://map name
+					sCompare1 = ServerList[j].szMap;
+					sCompare2 = ServerList[j+1].szMap;
+					break;
+				case 9://num players
+					bIntComp = true;
+					iCompare1 = ServerList[j].iNumPlayers;
+					iCompare2 = ServerList[j+1].iNumPlayers;
+					break;
+				default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server, favorites
+					bIntComp = true;
+					iCompare1 = ServerList[j].iPing;
+					iCompare2 = ServerList[j+1].iPing;
+					break;
+			}
+			if ( bIntComp )//compare int sizes
+			{
+				if ( _bAscending )
+					bSwap =  iCompare1 > iCompare2;
+				else
+					bSwap =  iCompare1 < iCompare2;
+			}
+			else//compare strings
+			{
+				if ( _bAscending )
+					bSwap =  sCompare1 > sCompare2;
+				else
+					bSwap =  sCompare1 < sCompare2;
+			}
+			bSwap = ( ( bSwap || ( ServerList[j].iPing == 1000 ) ) && ( ServerList[j+1].iPing != 1000 ) );//always send servers with no response to the bottom of the list
+			if ( bSwap )
+			{
+				temp = ServerList[j];
+				ServerList[j] = ServerList[j + 1];
+				ServerList[j + 1] = temp;
+			}
+		}
+	}
+	GetGSServers();//forces a rebuild in the menu list items based on our resorted ServerList array
 }
 
 // ManageTabSelection() performs various actions when a user changes the tab in
@@ -386,65 +560,6 @@ function ManageTabSelection(INT _MPTabChoiceID)
 			class'OpenLogger'.static.Warning("This tab was not supported (OpenMultiPlayerWidget)", self);
 			break;
 	}
-}
-
-//0.8 written
-//1.3 added mod keyword locking
-//1.5 receive locked info from specific servers, not master list
-function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked)
-{
-	local R6WindowListServerItem CurServer;
-	local int i;
-
-	//0.8
-	//find the server in the list that we received info for, and update
-	CurServer = R6WindowListServerItem(m_ServerListBox.GetItemAtIndex(0));
-	while ( CurServer != none )
-	{
-		if ( CurServer.szIPAddr == sIP )
-		{
-			CurServer.iMaxPlayers = iMaxP;
-			CurServer.iNumPlayers = iNumP;
-			CurServer.szName = sSvrName;
-			CurServer.szGameType = GetLevel().GetGameNameLocalization(sGMode);
-			CurServer.szMap = sMapName;
-			//1.3 - grey out version if not the right mod
-			if ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) )
-				CurServer.bSameVersion = false;
-			else
-				CurServer.bSameVersion = true;
-			CurServer.bLocked = bSvrLocked;//1.5 added locked here
-			//1.5 add ping
-			i = Timer.EndTimer(CurServer.szIPAddr);
-			if ( i != -1 )
-				CurServer.iPing = i;
-			CurServer = none;//break the while loop
-		}
-		else
-		CurServer = R6WindowListServerItem(CurServer.Next);
-	}
-}
-
-// InitServerList() creates a window for the server list. It is called by
-// ShowWindow(). In our version, we are able to override the server ping timeout.
-// Overrides the matching function in R6MenuMultiPlayerWidget.
-// 1.3: fixed access none
-function InitServerList()
-{
-	local Font buttonFont;
-	local int iFiles, i, j;
-
-	// Create window for server list
-	if ( m_ServerListBox != none )
-		return;
-	m_ServerListBox = R6WindowServerListBox(CreateWindow(class'R6WindowServerListBox',K_XSTARTPOS_NOBORDER,K_YPOS_FIRST_TABWINDOW,K_WINDOWWIDTH_NOBORDER,K_FFIRST_WINDOWHEIGHT,self));
-	m_ServerListBox.Register( m_pFirstTabManager);
-	m_ServerListBox.SetCornerType(No_Borders);
-	m_ServerListBox.m_Font = Root.Fonts[F_ListItemSmall];
-	if ( m_LanServers != none )//accessed none fix?
-		m_ServerListBox.m_iPingTimeOut = m_LanServers.NativeGetPingTimeOut();
-	else
-		m_ServerListBox.m_iPingTimeOut = 10000;
 }
 
 defaultproperties
