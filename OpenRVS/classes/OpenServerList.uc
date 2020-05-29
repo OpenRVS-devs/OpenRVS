@@ -8,28 +8,31 @@
 // - this class now handles all parsing of server information
 // - also handles loading backup server list if connection fails
 // - now passes each server's info to the widget class instead of passing the raw strings to parse
-class OpenServerList extends TcpLink;
+//1.5
+// - refactored to use OpenHTTPClient for request/response
+// - now only focuses on parsing the response
+class OpenServerList extends Actor;
 
 struct AServer
 {
 	var string ServerName;
 	var string IP;
 	var string GameMode;
-};//1.3 added here
+};
+
+const INI_HEADER_LINE = "[OpenRVS.";//support .OpenMultiPlayerWidget and .OpenServerList
+const FALLBACK_SERVERS_FILE = "Servers.list";
 
 var OpenMultiPlayerWidget M;
 var OpenHTTPClient httpc;
+var config array<AServer> FallbackServers;//var name must match Servers.list
 var string WebAddress;
 var string FileName;
-var config array<AServer> ServerList;
 
-//start up
-//receives a URL from multiplayer widget
-//if no URL, connects with the default server list at rvsgaming.org
+// Starts OpenServerList and send an HTTP request to the server list provider.
 function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F)
 {
 	class'OpenLogger'.static.LogStartupMessage();
-	class'OpenLogger'.static.Debug("STARTING UP", self);
 
 	M = Widget;
 	if ( W != "" )
@@ -47,19 +50,11 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 	httpc.SendRequest("http://" $ WebAddress $ "/" $ FileName);
 }
 
-//when connection is finished, check the length of each received line.
-//lines too large will crash/cause other issues
-//so split lines into manageable size
-//then parse them to find server info and send back to the multiplayer menu.
-//strips out extra info on the ends of the string and returns a server string in this format:
-//a server name",IP="44.434.4.434:7777",Locked=false,GameMode="Adver
-//the function in OpenMultiPlayerWidget will parse this further to get the needed info.
-//1.3 - NO LONGER parsed in OpenMultiPlayerWidget, parsed below
-function ParseServersINI(OpenHTTPClient.HttpResponse resp)
+// Receives and detects type for an HTTP response from the server list provider.
+// It is also responsible for sending servers to OpenMultiPlayerWidget.
+function ParseServers(OpenHTTPClient.HttpResponse resp)
 {
 	local array<string> lines;
-	local string line;
-	local int i;
 
 	httpc = none;//done with HTTP client
 
@@ -67,11 +62,36 @@ function ParseServersINI(OpenHTTPClient.HttpResponse resp)
 	if (resp.Code != 200)
 	{
 		class'OpenLogger'.static.Error("failed to retrieve servers over http", self);
-		NoServerList();
+		SendServersUpstream(GetFallbackServers());
+		return;
 	}
 
-	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
+	// Determine response type.
 	class'OpenString'.static.Split(resp.Body, Chr(10), lines);
+	if (Left(lines[0], Len(INI_HEADER_LINE)) == INI_HEADER_LINE)
+	{
+		SendServersUpstream(ParseServersINI(lines));
+		return;
+	}
+	// Add new supported types (e.g. CSV) here.
+
+	// Fall back to local file.
+	class'OpenLogger'.static.Error("unknown server list response type", self);
+	SendServersUpstream(GetFallbackServers());
+}
+
+// Parses a server list in the INI file format.
+function array<AServer> ParseServersINI(array<string> lines)
+{
+	local string line;//server list line "ServerName=(a=b,c=d,e=f)"
+	local array<string> fields;//parsed server parameters ["a=b", "c=d"]
+	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
+	local int numFields, numSubfields;
+	local int i, j;
+	local AServer srv;
+	local array<AServer> servers;
+
+	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
 	lines.Remove(0, 1);//skips header line (specific to INI parser)
 	for (i=0; i<lines.Length; i++)
 	{
@@ -81,34 +101,11 @@ function ParseServersINI(OpenHTTPClient.HttpResponse resp)
 		lines[i] = line;//overwrite
 	}
 
-	if ( lines.length > 0 )
+	class'OpenLogger'.static.Info("loading server list from URL", self);
+	class'OpenLogger'.static.Info("parsing" @ lines.Length @ "server lines", self);
+	for (i=0; i<lines.Length; i++)
 	{
-		class'OpenLogger'.static.Info("loading server list from URL", self);
-		ServerListSuccess(lines);//1.3 parsing moved here
-	}
-	else
-		NoServerList();//1.3 noserverlist moved here
-}
-
-//1.3
-//function moved here from openmultiplayerwidget
-//in the widget, the config list of servers was getting saved and loaded in the user.ini
-//and filling it with needless garbage?
-//moving it here should prevent it from saving automatically to user.ini
-//and prevent it from trying to load the glitchy lines?
-//function parses an array of strings to get server info, then will send each server item to widget
-function ServerListSuccess(array<string> List)
-{
-	local array<string> fields;//parsed server parameters ["a=b", "c=d"]
-	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
-	local int numFields, numSubfields;
-	local int i, j;
-	local AServer srv;
-
-	class'OpenLogger'.static.Info("parsing" @ List.Length @ "server lines", self);
-	for (i=0; i<List.Length; i++)
-	{
-		numFields = class'OpenString'.static.Split(List[i], ",", fields);//fields is now a list of k=v
+		numFields = class'OpenString'.static.Split(lines[i], ",", fields);//fields is now a list of k=v
 		for (j=0; j<numFields; j++)
 		{
 			numSubfields = class'OpenString'.static.Split(fields[j], "=", kvpair);//kvpair is one k=v set
@@ -136,37 +133,30 @@ function ServerListSuccess(array<string> List)
 		//error checking for required fields
 		if ( (srv.ServerName == "") || (srv.IP == "") || (srv.GameMode == "") )
 			continue;//do not add this server
-		ServerList[ServerList.length] = srv;
+		servers[servers.length] = srv;
 	}
-	class'OpenLogger'.static.Info("loading" @ ServerList.Length @ "parsed servers", self);
 
-	M.ClearServerList();//clears the widget's server list
-	for (i=0; i<ServerList.Length; i++)
-	{
-		M.AddServerToList(ServerList[i].ServerName, ServerList[i].IP, ServerList[i].GameMode);
-	}
-	M.FinishedServers();//tells widget that the list is done, display them
-
-	ServerList.Remove(0, ServerList.Length);//all done, free the temp list
+	return servers;
 }
 
-//1.3
-//moved function from widget to here
-//handles loading backup list
-function NoServerList()
+// Retrieves fallback servers from local file on disk.
+function array<AServer> GetFallbackServers()
+{
+	LoadConfig(FALLBACK_SERVERS_FILE);
+	class'OpenLogger'.static.Debug("loaded" @ FallbackServers.Length @ "servers from fallback file", self);
+	return FallbackServers;
+}
+
+// Sends the completed server list to OpenMultiPlayerWidget.
+function SendServersUpstream(array<AServer> servers)
 {
 	local int i;
 
-	class'OpenLogger'.static.Info("loading backup file Servers.list", self);
-	LoadConfig("Servers.list");
-	M.ClearServerList();//clears the widget's server list
-	i = 0;
-	while ( i < ServerList.length )
+	class'OpenLogger'.static.Info("loading" @ servers.Length @ "parsed servers", self);
+	M.ClearServerList();
+	for (i=0; i<servers.Length; i++)
 	{
-		M.AddServerToList(ServerList[i].ServerName, ServerList[i].IP, ServerList[i].GameMode);
-		i++;
+		M.AddServerToList(servers[i].ServerName, servers[i].IP, servers[i].GameMode);	
 	}
-	M.FinishedServers();//tells widget that the list is done, display them
-
-	ServerList.Remove(0, ServerList.Length);//all done, free the temp list
+	M.FinishedServers();
 }
