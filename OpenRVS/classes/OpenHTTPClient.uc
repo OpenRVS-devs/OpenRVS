@@ -233,6 +233,9 @@ private static function ParsedURL parseHttpUrl(string url)
 	local string path;
 	local int sep;//index of ":"
 
+	if (InStr(url, "http://") == -1)
+		url = "http://" $ url;//make http:// optional
+
 	//before: "http://www.example.com[:80]/servers"
 	//after: ["http:", "", "www.example.com[:80]", "servers"]
 	numParts = class'OpenString'.static.Split(url, "/", urlParts);

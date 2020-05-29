@@ -112,7 +112,7 @@ function Created()
 	local R6Mod Temp;
 	local OpenRVS openrvs;
 
-	openrvs = Root.Console.ViewportOwner.Actor.Spawn(class'OpenrVS');
+	openrvs = Root.Console.ViewportOwner.Actor.Spawn(class'OpenRVS');
 	openrvs.Init();//initialize OpenRVS
 
 	super.Created();
