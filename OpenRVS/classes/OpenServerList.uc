@@ -83,7 +83,7 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 // Parses a server list in the INI file format.
 function array<AServer> ParseServersINI(array<string> lines)
 {
-	local string line;//server list line "ServerName=(a=b,c=d,e=f)"
+	local string line;//server list line "ServerList=(a=b,c=d,e=f)"
 	local array<string> fields;//parsed server parameters ["a=b", "c=d"]
 	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
 	local int numFields, numSubfields;
