@@ -26,6 +26,8 @@ var config string ServerListURL;//0.8 server list file to load
 var bool bServerSuccess;//0.8 got list of servers from online provider
 var array<string> OpenQueries;//1.5 keep track of servers we've queried
 var OpenTimer Timer;//1.5 ping update
+var OpenServerList OS;//moved here from local - because needed in tab switching function
+var bool bNeedsExtraRefresh;//if going from lan tab to internet, we need an extra refresh forced after the server list is fetched
 
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
@@ -46,7 +48,6 @@ function QueryReceivedStartPreJoin ()
 // Added in 0.8 - made this function load saved URL for server list
 function Created()
 {
-	local OpenServerList OS;
 	super.Created();
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
@@ -94,6 +95,11 @@ function FinishedServers()
 {
 	bServerSuccess = true;
 	GetGSServers();
+	if ( bNeedsExtraRefresh )
+	{
+		bNeedsExtraRefresh = false;
+		Refresh(false);
+	}
 }
 
 // GetGSServers() retrieves the current list of servers from the GameService.
@@ -504,8 +510,11 @@ function ManageTabSelection(INT _MPTabChoiceID)
 	{
 		case MultiPlayerTabID.TAB_Lan_Server:
 			m_ConnectionTab = TAB_Lan_Server;
-			//if ( m_LanServers.m_GameServerList.length == 0 )
-			//	Refresh( FALSE );
+			ClearServerList();//added to fix bug where internet servers stay in lan tab
+			m_ServerListBox.ClearListOfItems();//fix lan tab
+			m_ServerListBox.m_SelectedItem = none;//fix lan tab
+			if ( m_LanServers.m_GameServerList.length == 0 )
+				Refresh( FALSE );
 			GetLanServers();
 			GetServerInfo( m_LanServers );
 			UpdateServerFilters();
@@ -518,7 +527,15 @@ function ManageTabSelection(INT _MPTabChoiceID)
 			m_pLoginWindow.StartLogInProcedure(self);
 			//if ( m_GameService.m_GameServerList.length == 0 )
 			//	Refresh( FALSE );
-			GetGSServers();
+			//when clicking from LAN to internet
+			if ( m_iLastTabSel == MultiPlayerTabID.TAB_Lan_Server )
+			{
+				ClearServerList();
+				bNeedsExtraRefresh = true;//force a refresh once server list fetched
+				if ( OS != none )
+					OS.Init(self,ServerURL,ServerListURL);//fix bug switching between internet/lan tabs - need to refetch server list
+			}
+			//GetGSServers();//commented out - this will get called automatically when openserverlist is done
 			UpdateServerFilters();
 			m_iLastTabSel = MultiPlayerTabID.TAB_Internet_Server;
 			SaveConfig();
