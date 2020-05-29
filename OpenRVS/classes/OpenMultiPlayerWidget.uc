@@ -510,8 +510,8 @@ function ManageTabSelection(INT _MPTabChoiceID)
 	{
 		case MultiPlayerTabID.TAB_Lan_Server:
 			m_ConnectionTab = TAB_Lan_Server;
-			//if ( m_LanServers.m_GameServerList.length == 0 )
-			//	Refresh( FALSE );
+			if ( m_LanServers.m_GameServerList.length == 0 )
+				Refresh( FALSE );
 			GetLanServers();
 			GetServerInfo( m_LanServers );
 			UpdateServerFilters();
