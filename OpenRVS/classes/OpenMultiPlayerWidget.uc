@@ -59,7 +59,7 @@ function Created()
 //openserverlist handles loading the backup list and sending to this class
 function NoServerList()
 {
-	class'OpenLogger'.static.Info("loading backup file Servers.list", self);	
+	class'OpenLogger'.static.Info("loading backup file Servers.list", self);
 	LoadConfig("Servers.list");
 	bServerSuccess = true;//0.8 - leave this here if we want backup server list to get queried too
 	GetGSServers();
