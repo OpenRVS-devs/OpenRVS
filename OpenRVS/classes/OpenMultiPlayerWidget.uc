@@ -89,6 +89,7 @@ function AddServerToList(string sn, string sip, string sm)
 	Temp.ServerName = sn;
 	Temp.IP = sip;
 	Temp.GameMode = sm;
+	Temp.iPing = 1000;//1.5 - don't let iPing initialize with null value of 0 - for sorting. If server responds, this value will be set to actual ping
 	ServerList[ServerList.length] = Temp;
 }
 
@@ -166,31 +167,14 @@ function GetGSServers()
 		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(i,NewItem));
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
-		NewItem.bFavorite = true;
-		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change
+		NewItem.bFavorite = true;//todo - favorite servers
+		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
 		NewItem.szIPAddr = ServerList[i].IP;
-		if ( ( ServerList[i].iPing > 0 ) && ( ServerList[i].iPing != 1000 ) )//1.5 change
-			NewItem.iPing = ServerList[i].iPing;
-		else
-		{
-			ServerList[i].iPing = 1000;//for sorting - null value is 0 which sorted as better than low ping servers
-			NewItem.iPing = 1000;
-		}
+		NewItem.iPing = ServerList[i].iPing;
 		NewItem.szName = ServerList[i].ServerName;
 		NewItem.szMap = ServerList[i].szMap;//"";//1.5 change
-		if ( ServerList[i].iMaxPlayers == 0 )//1.5 change - server hasn't responded yet if maxplayers is still 0
-		{
-			//for sorting: servers that didn't respond sort the same as servers with 0 players
-			//so set num players in the array as -1 to sort worse
-			ServerList[i].iNumPlayers = -1;
-			NewItem.iMaxPlayers = 0;
-			NewItem.iNumPlayers = 0;
-		}
-		else
-		{
-			NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
-			NewItem.iNumPlayers = ServerList[i].iNumPlayers;
-		}
+		NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
+		NewItem.iNumPlayers = ServerList[i].iNumPlayers;
 		NewItem.bLocked = ServerList[i].Locked;
 		NewItem.bDedicated = true;//todo: grab dedicated info from client beacon receiver
 		NewItem.bPunkBuster = false;
@@ -338,6 +322,7 @@ function Refresh(bool bActivatedByUser)
 	{
 		i = 0;
 		bFound = false;
+		ServerList[j].iPing = 1000;//set to 1000 so if server doesn't respond this time, it will sort to the bottom of the list
 		//1.5 - only one open query to a server at a time
 		while ( i < OpenQueries.length )
 		{
@@ -481,9 +466,9 @@ function ResortServerList(int iCategory, bool _bAscending)
 				case 9://num players
 					bIntComp = true;
 					iCompare1 = ServerList[j].iNumPlayers;
-					iCompare1 = ServerList[j+1].iNumPlayers;
+					iCompare2 = ServerList[j+1].iNumPlayers;
 					break;
-				default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server
+				default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server, favorites
 					bIntComp = true;
 					iCompare1 = ServerList[j].iPing;
 					iCompare2 = ServerList[j+1].iPing;
@@ -503,6 +488,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 				else
 					bSwap =  sCompare1 < sCompare2;
 			}
+			bSwap = ( ( bSwap || ( ServerList[j].iPing == 1000 ) ) && ( ServerList[j+1].iPing != 1000 ) );//always send servers with no response to the bottom of the list
 			if ( bSwap )
 			{
 				temp = ServerList[j];
