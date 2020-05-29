@@ -110,8 +110,10 @@ function CreateButtons()
 function Created()
 {
 	local R6Mod Temp;
+	local OpenRVS openrvs;
 
-	class'OpenLogger'.static.LogStartupMessage();
+	openrvs = Root.Console.ViewportOwner.Actor.Spawn(class'OpenrVS');
+	openrvs.Init();//initialize OpenRVS
 
 	super.Created();
 	Temp = class'Actor'.static.GetModMgr().m_pCurrentMod;
