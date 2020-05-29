@@ -106,16 +106,19 @@ function CreateButtons()
 
 //from super
 //now adds U and UTX support to the Mods folder
+//this is the first OpenRVS code which is executed by clients
 function Created()
 {
 	local R6Mod Temp;
+
+	class'OpenLogger'.static.LogStartupMessage();
+
 	super.Created();
 	Temp = class'Actor'.static.GetModMgr().m_pCurrentMod;
 	Temp.m_aExtraPaths[Temp.m_aExtraPaths.length] = "..\\Mods\\*.u";
 	Temp.m_aExtraPaths[Temp.m_aExtraPaths.length] = "..\\Mods\\*.utx";
 	class'Actor'.static.GetModMgr().AddNewModExtraPath(Temp,0);
 }
-
 
 //rewritten from super
 //will get the custom game type if a custom type button is selected

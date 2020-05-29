@@ -49,13 +49,9 @@ function Created()
 	local OpenServerList OS;
 	super.Created();
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
-	//LoadConfig("Servers.list");//only load this if fetching server list fails - see NoServerList()
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
 	OS = Root.Console.ViewportOwner.Actor.spawn(class'OpenServerList');//get the list from Rvsgaming.org or alternate host
 	OS.Init(self,ServerURL,ServerListURL);//0.8 made this load saved config vars in openrvs.ini
-	//DEBUG: read google main page and try to parse it for server list
-	//if working properly, should get the page, discard every line, and log warning that no serverlist was found
-	//OS.Init(self,"www.google.com","index.html");
 }
 
 //couldn't get server list from rvsgaming.org
@@ -64,7 +60,6 @@ function Created()
 function NoServerList()
 {
 	class'OpenLogger'.static.Info("loading backup file Servers.list", self);
-	//bDONTQUERY = true;//0.8//commented out - we want to query backup list too
 	LoadConfig("Servers.list");
 	bServerSuccess = true;//0.8 - leave this here if we want backup server list to get queried too
 	GetGSServers();
@@ -238,7 +233,6 @@ function ShowWindow()
 	//0.9 fix: copy all super into this function and eliminate super call
 	//super.ShowWindow();//0.9 - lag fix
 	local string _szIpAddress;
-	class'OpenLogger'.static.Debug("user opened mp menu", self);
 
 	//BELOW IS FROM SUPER!
 	//important line from 1.6 - not present in 1.56!

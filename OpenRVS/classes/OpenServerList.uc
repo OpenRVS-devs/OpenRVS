@@ -32,8 +32,6 @@ var string FileName;
 // Starts OpenServerList and send an HTTP request to the server list provider.
 function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F)
 {
-	class'OpenLogger'.static.LogStartupMessage();
-
 	M = Widget;
 	if ( W != "" )
 		WebAddress = W;
