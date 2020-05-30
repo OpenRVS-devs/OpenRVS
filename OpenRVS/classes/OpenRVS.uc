@@ -30,7 +30,7 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 	latest = resp.Body;
 	latest = Left(latest, Len(latest)-1);
 
-	// Log the version mismatch to file.
+	// Log version information to file.
 	// TODO: Also display a popup.
 	if (OPENRVS_VERSION != latest)
 		class'OpenLogger'.static.Warning("OpenRVS is outdated. Your version:" @ OPENRVS_VERSION $ ", latest version:" @ latest, self);
