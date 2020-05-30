@@ -4,24 +4,52 @@
 //IMPORTANT: Servers with N4 Admin should not install this class
 //debug - should log any time an initial connection with client opens
 //installed server side
-
 class OpenBeacon extends UdpBeacon transient;
 
+// RegistryServer refers to a server running github.com/ijemafe/openrvs-registry.
+// This can be updated here, or disabled by commenting the RegisterServer() call
+// in OpenServer.uc.
+var config string RegistryServerIP;
+var config int RegistryServerPort;
+
 const MARKER_MOTD = "O2";
+const MOTD_MAX_LEN = 60;//Container window can only display this many chars
 
-const MOTD_MAX_LEN = 60;//Game can only display this many bytes
+// Fire off automatic server registration.
+function RegisterServer()
+{
+	local IpAddr addr;
+	local bool ok;
 
-event ReceivedText(IpAddr Addr,string Text)
+	// Validate input from config file.
+	if (RegistryServerIP == "")
+		RegistryServerIP = "64.225.54.237";//Current openrvs-registry deployment
+	if (RegistryServerPort == 0)
+		RegistryServerPort = 8080;
+
+	ok = StringToIpAddr(RegistryServerIP, addr);
+	if (!ok) {
+		class'OpenLogger'.static.Error("failed to resolve registration ip", self);
+		return;
+	}
+
+	addr.Port = RegistryServerPort;
+	class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerIP @ "on port" @ RegistryServerPort, self);
+	BroadcastBeacon(addr);
+	class'OpenLogger'.static.Debug("registration beacon sent", self);
+}
+
+event ReceivedText(IpAddr Addr, string Text)
 {
 	local R6ServerInfo pServerOptions;
 	local BOOL bServerResistered;
 	pServerOptions = class'Actor'.static.GetServerOptions();
-	class'OpenLogger'.static.Debug("OpenBeacon received text: " $ Text, self);
-	if ( Text == "REPORT" )
+	class'OpenLogger'.static.Debug("OpenBeacon received text:" @ Text, self);
+	if (Text == "REPORT")
 		BroadcastBeacon(Addr);
-	if ( Text == "REPORTQUERY" )
+	if (Text == "REPORTQUERY")
 		BroadcastBeaconQuery(Addr);
-	if ( Text == "PREJOIN" )
+	if (Text == "PREJOIN")
 		RespondPreJoinQuery(Addr);
 }
 
@@ -53,7 +81,7 @@ function string BuildBeaconText()
 
 	// This large block of textData changes packs all relevant data into the UDP
 	// message body for the beacon response.
-	textData = textData @ GamePortMarker @ Mid(Level.GetAddressURL(),InStr(Level.GetAddressURL(),":")+1);
+	textData = textData @ GamePortMarker @ Mid(Level.GetAddressURL(), InStr(Level.GetAddressURL(),":")+1);
 	if ( InStr(Level.Game.GetURLMap(), ".") == -1 )
 		textData = textData @ MapNameMarker @ Level.Game.GetURLMap();
 	else
