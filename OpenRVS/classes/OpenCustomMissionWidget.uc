@@ -13,7 +13,6 @@
 
 //issue:
 //	- after pressing > button on mission completed (maybe on failed too?), all custom buttons disappear for good
-
 class OpenCustomMissionWidget extends R6MenuCustomMissionWidget;
 
 var config string GameType;//the string for the new gametype class eg "newmod.mynewgametype"
@@ -110,8 +109,11 @@ function CreateButtons()
 function Created()
 {
 	local R6Mod Temp;
+	local OpenRVS openrvs;
 
-	class'OpenLogger'.static.LogStartupMessage();
+	openrvs = new class'OpenRVS';
+	openrvs.Init(GetEntryLevel());//initialize OpenRVS
+	openrvs = none;//done initializing
 
 	super.Created();
 	Temp = class'Actor'.static.GetModMgr().m_pCurrentMod;

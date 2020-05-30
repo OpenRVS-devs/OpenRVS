@@ -54,6 +54,9 @@ var string CallbackName;
 const CALLBACK_SERVER_LIST = "server_list";
 var OpenServerList ServerListCallbackProvider;
 
+const CALLBACK_VERSION_CHECK = "version_check";
+var OpenRVS VersionCheckCallbackProvider;
+
 //
 // Event Overrides
 //
@@ -195,6 +198,10 @@ private function triggerCallbacks()
 			class'OpenLogger'.static.Debug("calling ServerListCallback", self);
 			ServerListCallback(Response);
 			break;
+		case CALLBACK_VERSION_CHECK:
+			class'OpenLogger'.static.Debug("calling VersionCheckCallback", self);
+			VersionCheckCallback(Response);
+			break;
 		default:
 			class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
 			break;
@@ -291,7 +298,7 @@ private static function HttpResponse parseHttpResponse(string response)
 //
 
 // Feed data to the server list parser.
- function ServerListCallback(HttpResponse resp)
+function ServerListCallback(HttpResponse resp)
 {
 	if (ServerListCallbackProvider == none)
 	{
@@ -299,4 +306,15 @@ private static function HttpResponse parseHttpResponse(string response)
 		return;//nothing to do
 	}
 	ServerListCallbackProvider.ParseServers(resp);
+}
+
+// Return the latest OpenRVS version to the version checker.
+function VersionCheckCallback(HttpResponse resp)
+{
+	if (VersionCheckCallbackProvider == none)
+	{
+		class'OpenLogger'.static.Debug("VersionCheckCallbackProvider was none", self);
+		return;//nothing to do
+	}
+	VersionCheckCallbackProvider.CheckVersion(resp);
 }

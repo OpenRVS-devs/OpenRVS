@@ -13,7 +13,12 @@ var bool bLogged, bCracked;
 //log to server to make sure it's running
 event PreBeginPlay()
 {
-	class'OpenLogger'.static.LogStartupMessage();
+	local OpenRVS openrvs;
+
+	openrvs = new class'OpenRVS';
+	openrvs.Init(self);//initialize OpenRVS
+	openrvs = none;//done initializing
+
 	super.PreBeginPlay();
 	SetTimer(60,true);
 }
