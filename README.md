@@ -26,7 +26,7 @@ The IP and port for the deployment can be configured in `openrvs.ini`:
 
 ```ini
 [OpenRVS.OpenBeacon]
-RegistryServerIP=64.225.54.237 ; the current deployment
+RegistryServerIP=64.225.54.237
 RegistryServerPort=8080
 ```
 
