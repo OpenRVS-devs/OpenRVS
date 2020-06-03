@@ -10,11 +10,29 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 
 ## To Do
 
-- See GitHub issues list for the complete to-do.  Feel free to request modifications and additions there as well.
+See GitHub issues list for the complete to-do. Feel free to request modifications and additions there as well.
+
+## The OpenRVS Registry
+
+Since v1.5, OpenRVS servers send an extra UDP beacon to a web server running
+[openrvs-registry](https://github.com/ijemafe/openrvs-registry). This app tracks
+all known servers, healthchecks them to hide unhealthy serers, and automatically
+adds new servers to the list when the UDP beacon is received.
+
+The registry listens for beacons on UDP port 8080, and listens for server list
+requests on HTTP port 8080 (on the /servers URL).
+
+The IP and port for the deployment can be configured in `openrvs.ini`:
+
+```ini
+[OpenRVS.OpenBeacon]
+RegistryServerIP=64.225.54.237
+RegistryServerPort=8080
+```
 
 ## Local Development
 
-**Note: You must test your changes using this process BEFORE opening a pull request!**
+**Note: You should test your changes using this process BEFORE opening a pull request!**
 
 First, you will need to download [Twi's Raven Shield SDK](https://www.moddb.com/mods/raven-shield-software-development-kit). Put this somewhere convenient (such as `C:\rvssdk`).
 

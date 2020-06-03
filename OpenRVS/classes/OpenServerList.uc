@@ -20,7 +20,8 @@ struct AServer
 	var string GameMode;
 };
 
-const INI_HEADER_LINE = "[OpenRVS.";//support .OpenMultiPlayerWidget and .OpenServerList
+const INI_HEADER_LINE = "[OpenRVS.";//support any OpenRVS class
+const CSV_HEADER_LINE = "name,ip,port,mode";
 const FALLBACK_SERVERS_FILE = "Servers.list";
 
 var OpenMultiPlayerWidget M;
@@ -64,14 +65,21 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 		return;
 	}
 
-	// Determine response type.
+	class'OpenLogger'.static.Info("loading servers from Internet", self);
 	class'OpenString'.static.Split(resp.Body, Chr(10), lines);
-	if (Left(lines[0], Len(INI_HEADER_LINE)) == INI_HEADER_LINE)
+	class'OpenLogger'.static.Info("parsing" @ lines.Length @ "server lines", self);
+
+	// Determine response type.
+	if (Left(lines[0], Len(CSV_HEADER_LINE)) ~= CSV_HEADER_LINE)
+	{
+		SendServersUpstream(ParseServersCSV(lines));
+		return;
+	}
+	if (Left(lines[0], Len(INI_HEADER_LINE)) ~= INI_HEADER_LINE)
 	{
 		SendServersUpstream(ParseServersINI(lines));
 		return;
 	}
-	// Add new supported types (e.g. CSV) here.
 
 	// Fall back to local file.
 	class'OpenLogger'.static.Error("unknown server list response type", self);
@@ -89,8 +97,10 @@ function array<AServer> ParseServersINI(array<string> lines)
 	local AServer srv;
 	local array<AServer> servers;
 
-	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
+	class'OpenLogger'.static.Debug("using csv parser", self);
 	lines.Remove(0, 1);//skips header line (specific to INI parser)
+
+	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
 	for (i=0; i<lines.Length; i++)
 	{
 		line = lines[i];
@@ -99,8 +109,6 @@ function array<AServer> ParseServersINI(array<string> lines)
 		lines[i] = line;//overwrite
 	}
 
-	class'OpenLogger'.static.Info("loading server list from URL", self);
-	class'OpenLogger'.static.Info("parsing" @ lines.Length @ "server lines", self);
 	for (i=0; i<lines.Length; i++)
 	{
 		numFields = class'OpenString'.static.Split(lines[i], ",", fields);//fields is now a list of k=v
@@ -131,7 +139,42 @@ function array<AServer> ParseServersINI(array<string> lines)
 		//error checking for required fields
 		if ( (srv.ServerName == "") || (srv.IP == "") || (srv.GameMode == "") )
 			continue;//do not add this server
-		servers[servers.length] = srv;
+		servers[servers.Length] = srv;
+	}
+
+	return servers;
+}
+
+function array<AServer> ParseServersCSV(array<string> lines)
+{
+	local array<string> fields;
+	local int i;
+	local AServer srv;
+	local array<AServer> servers;
+
+	class'OpenLogger'.static.Debug("using csv parser", self);
+	lines.Remove(0, 1);//skips header line (specific to registry csv format)
+
+	for (i=0; i<lines.Length; i++)
+	{
+		class'OpenString'.static.Split(lines[i], ",", fields);
+		if (fields.Length != 4)
+		{
+			class'OpenLogger'.static.Warning("invalid line skipped:" @ lines[i], self);
+			continue;
+		}
+		
+		srv.ServerName = fields[0];
+		srv.IP = fields[1] $ ":" $ fields[2];//Includes Port
+		srv.GameMode = fields[3];
+
+		//error checking for required fields
+		if ( (srv.ServerName == "") || (srv.IP == ":") || (srv.GameMode == "") )
+		{
+			class'OpenLogger'.static.Warning("line contained empty field(s):" @ lines[i], self);
+			continue;//do not add this server
+		}
+		servers[servers.Length] = srv;
 	}
 
 	return servers;
@@ -141,7 +184,7 @@ function array<AServer> ParseServersINI(array<string> lines)
 function array<AServer> GetFallbackServers()
 {
 	LoadConfig(FALLBACK_SERVERS_FILE);
-	class'OpenLogger'.static.Debug("loaded" @ FallbackServers.Length @ "servers from fallback file", self);
+	class'OpenLogger'.static.Info("loaded" @ FallbackServers.Length @ "servers from fallback file", self);
 	return FallbackServers;
 }
 

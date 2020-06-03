@@ -5,7 +5,6 @@
 //Fixes bugs in multi-server lists
 //Sets all pawns as always relevant - important for high ping players
 //installed server side
-
 class OpenServer extends Actor config(BanList);
 
 var bool bLogged, bCracked;
@@ -20,7 +19,17 @@ event PreBeginPlay()
 	openrvs = none;//done initializing
 
 	super.PreBeginPlay();
-	SetTimer(60,true);
+	SetTimer(60, true);
+}
+
+//once everything is initialized, build a beacon text and automatically register
+//this server with the OpenRVS registry.
+event PostNetBeginPlay()
+{
+	super.PostNetBeginPlay();
+
+	//send a UDP beacon to the registry
+	OpenBeacon(R6AbstractGameInfo(Level.Game).m_UdpBeacon).RegisterServer();
 }
 
 //find a player who hasn't been validated
