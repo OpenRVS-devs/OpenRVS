@@ -1,10 +1,8 @@
 class OpenRVS extends Object;
 
 const OPENRVS_VERSION = "v1.5";
-//note: this is a temporary url on a file server hosting custom maps.
-//this should be moved to rvsgaming.org's file server, or integrated into a
-//server registration app.
-const LATEST_VERSION_URL = "http://64.225.54.237/latest-version.txt";
+// This URL returns the latest release version from GitHub over HTTP.
+const LATEST_VERSION_URL = "http://64.225.54.237/latest";
 
 var OpenHTTPClient httpc;
 
