@@ -23,6 +23,8 @@ function Init(Actor a)
 function CheckVersion(OpenHTTPClient.HttpResponse resp)
 {
 	local string latest;
+	local string warning;
+	local OpenPopUpWindow WarningWindow;
 
 	if (resp.Code != 200)
 	{
@@ -32,12 +34,25 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 
 	// Trim the line break.
 	latest = resp.Body;
-	latest = Left(latest, Len(latest)-1);
+//	latest = Left(latest, Len(latest)-1);//WHAT IS THIS? No line break, just trims the 4 out of "v1.4"
 
 	// Log version information to file.
 	// TODO: Also display a popup.
 	if (OPENRVS_VERSION != latest)
-		class'OpenLogger'.static.Warning("OpenRVS is outdated. Your version:" @ OPENRVS_VERSION $ ", latest version:" @ latest, self);
+	{
+		warning = "Your copy of the OpenRVS patch is outdated. Your version:" @ OPENRVS_VERSION $ ", latest version:" @ latest;
+		class'OpenLogger'.static.Warning(warning, self);
+		//v1.5 - add pop up box notification to main menu
+		WarningWindow = class'OpenPopUp'.static.CreatePopUp("OpenRVS Patch Check");
+		if ( WarningWindow != none )// should be none on server
+		{
+			WarningWindow.AddText("Please note:");
+			WarningWindow.AddText(warning);
+			WarningWindow.AddText("Click the link below to download the latest update.");
+			WarningWindow.AddText("");
+			WarningWindow.MakeURLButton("https://www.moddb.com/search?q=openrvs","Download from ModDB");
+		}
+	}
 	else
 		class'OpenLogger'.static.Info("OpenRVS is up to date (" $ latest $ ")", self);
 }
