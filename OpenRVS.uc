@@ -44,14 +44,11 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 		class'OpenLogger'.static.Warning(warning, self);
 		//v1.5 - add pop up box notification to main menu
 		WarningWindow = class'OpenPopUp'.static.CreatePopUp("OpenRVS Patch Check");
-		if ( WarningWindow != none )// should be none on server
-		{
-			WarningWindow.AddText("Please note:");
-			WarningWindow.AddText(warning);
-			WarningWindow.AddText("Click the link below to download the latest update.");
-			WarningWindow.AddText("");
-			WarningWindow.MakeURLButton("https://www.moddb.com/search?q=openrvs","Download from ModDB");
-		}
+		WarningWindow.AddText("Please note:");
+		WarningWindow.AddText(warning);
+		WarningWindow.AddText("Click the link below to download the latest update.");
+		WarningWindow.AddText("");
+		WarningWindow.MakeURLButton("https://www.moddb.com/search?q=openrvs","Download from ModDB");
 	}
 	else
 		class'OpenLogger'.static.Info("OpenRVS is up to date (" $ latest $ ")", self);
