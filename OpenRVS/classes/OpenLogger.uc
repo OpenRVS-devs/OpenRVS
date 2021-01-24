@@ -1,4 +1,4 @@
-// OpenLogger writes leveled logs to <GameDir>\system\ravenshield.ini.
+// OpenLogger writes leveled logs to <GameDir>\system\ravenshield.log.
 class OpenLogger extends Object;
 
 const LOG_LEVEL_ERROR = "error";
