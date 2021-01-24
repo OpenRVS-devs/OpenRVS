@@ -2,7 +2,7 @@
 
 By the OpenRVS team:
   - original author: Twi
-  - programming: Twi and ijemafe
+  - programming: Twi and Will
   - game service fix: chriswak
   - community hosting: Tony and SMC Clan
 
