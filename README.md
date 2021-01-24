@@ -61,6 +61,14 @@ We have included a number of reusable UnrealScript2 libraries in OpenRVS:
 
 ## Version History
 
+#### Release 1.5
+
+- server ping in multiplayer menu added
+- server sorting in multiplayer menu added
+- version checking added - clients and servers not fully updated will write a warning to log, and clients will see a popup message with download link
+- support for automatic server registration added - needs to be fully implemented on master list host for functionality
+- support for CSV-format master server list added
+
 #### Release 1.4
 
 - support for custom FOVs added - including fix for weapon fov rendering
