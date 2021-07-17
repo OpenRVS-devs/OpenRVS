@@ -31,7 +31,7 @@ static function Info(string s, optional Object o)
 static function Debug(string s, optional Object o)
 {
 	local bool debugMode;
-	debugMode = true;//WARNING: Set to false before building releases for users!
+	debugMode = false;//WARNING: Set to false before building releases for users!
 	if (debugMode)
 		writeMsg(s, LOG_LEVEL_DEBUG, o);
 }
@@ -61,6 +61,6 @@ static function writeMsg(string s, string level, optional Object o)
 static function LogStartupMessage()
 {
 	log("	 ---- OpenRVS ----");
-	log("	 The team: Twi, ijemafe, and Tony");
+	log("	 The team: Twi, Will, and Tony");//v1.5 update name
 	log("	 With thanks to chriswak, Psycho, SMC clan, and SS clan");
 }
