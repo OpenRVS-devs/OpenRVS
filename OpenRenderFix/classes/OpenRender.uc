@@ -30,7 +30,7 @@ simulated event RenderFirstPersonGun(Canvas C)
 			W = R6Weapons(P.EngineWeapon);
 
 			//0 is inactive - render at world FOV
-			if ( DebugFPWeapRender != 0.0 ) && ( !Level.m_bInGamePlanningActive ) && ( PC.m_bUseFirstPersonWeapon ) && ( W.m_FPHands != none )
+			if ( ( DebugFPWeapRender != 0.0 ) && ( !Level.m_bInGamePlanningActive ) && ( PC.m_bUseFirstPersonWeapon ) && ( W.m_FPHands != none ) )
 			{
 				//do the fp position calculation
 				W.m_FPHands.SetLocation(P.R6CalcDrawLocation(P.EngineWeapon,rNewRotation,P.EngineWeapon.m_vPositionOffset));
