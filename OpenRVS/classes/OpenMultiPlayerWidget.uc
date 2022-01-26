@@ -51,11 +51,11 @@ function Created()
 	super.Created();
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
-	OS = Root.Console.ViewportOwner.Actor.spawn(class'OpenServerList');//get the list from Rvsgaming.org or alternate host
+	OS = Root.Console.ViewportOwner.Actor.spawn(class'OpenServerList');//get the server list over http
 	OS.Init(self,ServerURL,ServerListURL);//0.8 made this load saved config vars in openrvs.ini
 }
 
-//couldn't get server list from rvsgaming.org
+//couldn't get server list
 //1.3 - this function no longer used!
 //openserverlist handles loading the backup list and sending to this class
 function NoServerList()
@@ -575,8 +575,8 @@ function ManageTabSelection(INT _MPTabChoiceID)
 
 defaultproperties
 {
-	ServerURL="gsconnect.rvsgaming.org"
-	ServerListURL="servers-updated.list"
+	ServerURL="openrvs.org"
+	ServerListURL="servers"
 	//ServerList(0)=(ServerName="SMC Mod Testing",IP="185.24.221.23:7777",MaxPlayers=4,Locked=true,GameMode="coop")
 	//ServerList(1)=(ServerName="ShadowSquadHQ Adver",IP="198.23.145.10:7778",MaxPlayers=16,Locked=false,GameMode="Adver")
 }
