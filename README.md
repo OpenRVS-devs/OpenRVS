@@ -8,6 +8,10 @@ By the OpenRVS team:
 
 A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
+## Installing
+
+For instructions on installing OpenRVS, see [ModDB](https://www.moddb.com/games/tom-clancys-rainbow-six-3-raven-shield/downloads/raven-shield-openrvs-patch-v15).
+
 ## To Do
 
 See GitHub issues list for the complete to-do. Feel free to request modifications and additions there as well.
