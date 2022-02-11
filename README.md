@@ -8,6 +8,10 @@ By the OpenRVS team:
 
 A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
+## Installing
+
+For instructions on installing OpenRVS, see [ModDB](https://www.moddb.com/games/tom-clancys-rainbow-six-3-raven-shield/downloads/raven-shield-openrvs-patch-v15).
+
 ## To Do
 
 See GitHub issues list for the complete to-do. Feel free to request modifications and additions there as well.
@@ -106,7 +110,7 @@ We have included a number of reusable UnrealScript2 libraries in OpenRVS:
 
 - server list now fetches some current info from each server
 - added ability to specify alternate server list source
-- servers loaded from the backup list (if connection to gsconnect.rvsgaming.org fails) also fetch live info
+- servers loaded from the backup list (if connection to the configured server list fails) also fetch live info
 
 #### Beta 0.7
 
@@ -123,7 +127,7 @@ We have included a number of reusable UnrealScript2 libraries in OpenRVS:
 - bypasses UBI.com login
 - bypasses cd key client verification
 - fixes bug in join IP window
-- gets serverlist from rvsgaming.org
+- gets serverlist over http
 - allows connection to LAN server through internet
 - fixes issue with connecting to non-N4 server
 - bypasses cd key server verification

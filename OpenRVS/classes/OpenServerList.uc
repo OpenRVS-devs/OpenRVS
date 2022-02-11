@@ -37,11 +37,11 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 	if ( W != "" )
 		WebAddress = W;
 	else
-		WebAddress = "gsconnect.rvsgaming.org";
+		WebAddress = "openrvs.org";
 	if ( F != "" )
 		FileName = F;
 	else
-		FileName = "servers-updated.list";
+		FileName = "servers";
 
 	httpc = Spawn(class'OpenHTTPClient');
 	httpc.CallbackName = "server_list";
