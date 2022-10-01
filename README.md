@@ -30,9 +30,12 @@ The IP and port for the deployment can be configured in `openrvs.ini`:
 
 ```ini
 [OpenRVS.OpenBeacon]
-RegistryServerIP=64.225.54.237
+RegistryServerIP=184.73.85.28
 RegistryServerPort=8080
 ```
+
+NOTE: The native code (not modifiable with UnrealScript) does not accept DNS names,
+so the registry server IP must be an IP address.
 
 ## Local Development
 

@@ -15,7 +15,8 @@ var config int RegistryServerPort;
 const MARKER_MOTD = "O2";
 const MOTD_MAX_LEN = 60;//Container window can only display this many chars
 
-const DEFAULT_REGISTRY_IP = "64.225.54.237";//Host running openrvs-registry
+// NOTE: This can't be a DNS name; must be an IP address.
+const DEFAULT_REGISTRY_IP = "184.73.85.28";//Host running openrvs-registry
 const DEFAULT_REGISTRY_PORT = 8080;//UDP beacon port
 
 // Fire off automatic server registration.
