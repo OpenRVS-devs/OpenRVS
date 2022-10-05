@@ -2,6 +2,7 @@ class OpenRVS extends Object;
 
 const OPENRVS_VERSION = "v1.5";
 // This URL returns the latest release version from GitHub over HTTP.
+// Redirects to HTTPS; is that a regression?
 const LATEST_VERSION_URL = "http://openrvs.org/latest";
 
 var OpenHTTPClient httpc;

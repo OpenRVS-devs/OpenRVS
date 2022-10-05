@@ -16,6 +16,8 @@ const MARKER_MOTD = "O2";
 const MOTD_MAX_LEN = 60;//Container window can only display this many chars
 
 // NOTE: This can't be a DNS name; must be an IP address.
+// TODO: Use Resolve() for DNS?
+// https://github.com/willroberts/raven-shield-1.56/blob/main/IpDrv/Classes/InternetLink.uc#L62L66
 const DEFAULT_REGISTRY_IP = "184.73.85.28";//Host running openrvs-registry
 const DEFAULT_REGISTRY_PORT = 8080;//UDP beacon port
 
