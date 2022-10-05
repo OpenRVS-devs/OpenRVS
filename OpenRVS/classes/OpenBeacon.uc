@@ -6,7 +6,7 @@
 //installed server side
 class OpenBeacon extends UdpBeacon transient;
 
-// RegistryServer refers to a server running github.com/ijemafe/openrvs-registry.
+// RegistryServer refers to a server running github.com/willroberts/openrvs-registry.
 // This can be updated here, or disabled by commenting the RegisterServer() call
 // in OpenServer.uc.
 var config string RegistryServerHost;

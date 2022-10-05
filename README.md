@@ -19,9 +19,12 @@ See GitHub issues list for the complete to-do. Feel free to request modification
 ## The OpenRVS Registry
 
 Since v1.5, OpenRVS servers send an extra UDP beacon to a web server running
-[openrvs-registry](https://github.com/ijemafe/openrvs-registry). This app tracks
+[openrvs-registry](https://github.com/willroberts/openrvs-registry). This app tracks
 all known servers, healthchecks them to hide unhealthy serers, and automatically
 adds new servers to the list when the UDP beacon is received.
+
+Since v1.6, the config key is `RegistryServerHost` instead of `RegistryServerIP`,
+and DNS domain names are supported (rather than just IP addresses).
 
 The registry listens for beacons on UDP port 8080, and listens for server list
 requests on HTTP port 8080 (on the /servers URL).
@@ -30,7 +33,7 @@ The IP and port for the deployment can be configured in `openrvs.ini`:
 
 ```ini
 [OpenRVS.OpenBeacon]
-RegistryServerIP=184.73.85.28
+RegistryServerHost=api.openrvs.org
 RegistryServerPort=8080
 ```
 
