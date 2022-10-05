@@ -9,7 +9,7 @@ class OpenBeacon extends UdpBeacon transient;
 // RegistryServer refers to a server running github.com/ijemafe/openrvs-registry.
 // This can be updated here, or disabled by commenting the RegisterServer() call
 // in OpenServer.uc.
-var config string RegistryServerIP;
+var config string RegistryServerHost;
 var config int RegistryServerPort;
 
 const MARKER_MOTD = "O2";
@@ -18,7 +18,7 @@ const MOTD_MAX_LEN = 60;//Container window can only display this many chars
 // NOTE: This can't be a DNS name; must be an IP address.
 // TODO: Use Resolve() for DNS?
 // https://github.com/willroberts/raven-shield-1.56/blob/main/IpDrv/Classes/InternetLink.uc#L62L66
-const DEFAULT_REGISTRY_IP = "184.73.85.28";//Host running openrvs-registry
+const DEFAULT_REGISTRY_HOST = "api.openrvs.org";//Host running openrvs-registry
 const DEFAULT_REGISTRY_PORT = 8080;//UDP beacon port
 
 // Fire off automatic server registration.
@@ -28,21 +28,35 @@ function RegisterServer()
 	local bool ok;
 
 	// Validate input from config file.
-	if (RegistryServerIP == "")
-		RegistryServerIP = DEFAULT_REGISTRY_IP;
+	if (RegistryServerHost == "")
+		RegistryServerHost = DEFAULT_REGISTRY_HOST;
 	if (RegistryServerPort == 0)
 		RegistryServerPort = DEFAULT_REGISTRY_PORT;
 
-	ok = StringToIpAddr(RegistryServerIP, addr);
+	ok = StringToIpAddr(RegistryServerHost, addr);
 	if (!ok) {
-		class'OpenLogger'.static.Error("failed to resolve registration ip", self);
-		return;
+		// If RegistryServerHost was not already a valid IP address, attempt to resolve DNS.
+		Resolve(RegistryServerHost);
+	} else {
+		// Register by IP without waiting for the Resolve() event.
+		addr.Port = RegistryServerPort;
+		class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
+		BroadcastBeacon(addr);
+		class'OpenLogger'.static.Debug("registration beacon sent", self);
 	}
+}
 
+event Resolved(IpAddr addr)
+{
 	addr.Port = RegistryServerPort;
-	class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerIP @ "on port" @ RegistryServerPort, self);
+	class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
 	BroadcastBeacon(addr);
 	class'OpenLogger'.static.Debug("registration beacon sent", self);
+}
+
+event ResolveFailed()
+{
+	class'OpenLogger'.static.Error("failed to resolve registration ip; will not send auto-registration beacon", self);
 }
 
 event ReceivedText(IpAddr Addr, string Text)
