@@ -37,9 +37,6 @@ RegistryServerHost=api.openrvs.org
 RegistryServerPort=8080
 ```
 
-NOTE: The native code (not modifiable with UnrealScript) does not accept DNS names,
-so the registry server IP must be an IP address.
-
 ## Local Development
 
 **Note: You should test your changes using this process BEFORE opening a pull request!**
