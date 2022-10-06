@@ -37,7 +37,7 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 	if ( W != "" )
 		WebAddress = W;
 	else
-		WebAddress = "openrvs.org";
+		WebAddress = "api.openrvs.org";
 	if ( F != "" )
 		FileName = F;
 	else

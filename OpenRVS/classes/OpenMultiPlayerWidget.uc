@@ -575,7 +575,7 @@ function ManageTabSelection(INT _MPTabChoiceID)
 
 defaultproperties
 {
-	ServerURL="openrvs.org"
+	ServerURL="api.openrvs.org"
 	ServerListURL="servers"
 	//ServerList(0)=(ServerName="SMC Mod Testing",IP="185.24.221.23:7777",MaxPlayers=4,Locked=true,GameMode="coop")
 	//ServerList(1)=(ServerName="ShadowSquadHQ Adver",IP="198.23.145.10:7778",MaxPlayers=16,Locked=false,GameMode="Adver")
