@@ -2,7 +2,7 @@ class OpenRVS extends Object;
 
 const OPENRVS_VERSION = "v1.5";
 // This URL returns the latest release version from GitHub over HTTP.
-const LATEST_VERSION_URL = "http://64.225.54.237/latest";
+const LATEST_VERSION_URL = "http://api.openrvs.org/latest";
 
 var OpenHTTPClient httpc;
 
