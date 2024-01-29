@@ -6,15 +6,53 @@ By the OpenRVS team:
   - game service fix: chriswak
   - community hosting: Tony and SMC Clan
 
+Thanks to: Tony, Psycho, Legacy, juguLator01, SMC and ShadowSquad clans, and the
+AllR6 community.
+
 A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). Allows multiplayer again, enables more serious modding, implements some QOL fixes.
 
-## Installing
+## Installing or Updating OpenRVS (Client Instructions)
 
-For instructions on installing OpenRVS, see [ModDB](https://www.moddb.com/games/tom-clancys-rainbow-six-3-raven-shield/downloads/raven-shield-openrvs-patch-v15).
+1. Stop your game if it's running.
+2. Extract the contents of the OpenRVS ZIP file to your game's `system`
+   directory. For Steam, this is `steamapps\common\Rainbow Six 3 Gold\system`.
+3. Optionally adjust your FOV in `openrvs.ini` - see the `[OpenRVS.OpenFOV]`
+   section.
+4. Launch the game! You'll see a list of servers to choose from, or you can join
+   by IP address.
 
-## To Do
+## Installing or Updating OpenRVS (Server Instructions)
 
-See GitHub issues list for the complete to-do. Feel free to request modifications and additions there as well.
+1. Stop your server process if it's running.
+2. Extract the contents of the OpenRVS ZIP file to your game's `system`
+   directory.
+3. Edit `RavenShield.mod` in your game's `Mods` directory, and add the following:
+```ini
+ServerActors=OpenRVS.OpenServer
+ServerActors=OpenRVS.OpenBeacon
+ServerActors=OpenRenderFix.OpenFix
+ServerPackages=OpenRenderFix
+```
+   NOTE: The `OpenRVS.OpenBeacon` line should replace the `IpDrv.UdpBeacon` line.
+   This may not be compatible with N4Admin installations.
+4. Edit `system/RavenShield.ini`, and ensure that your `ServerBeaconPort` is set
+   to exactly 1000 above your server's `Port`, and that `BeaconPort` is exactly
+   2000 above your server's `Port`.
+5. Launch the server!
+
+NOTE: Server admins can ban users by IP address in the `BanList.ini` file, found
+in your game's `Server` directory.
+
+## Patching R6GameService.dll
+
+The `R6GameService.dll` file contains code which makes requests to Ubisoft's
+historical infrastructure for the game, which is now shut down. This can result
+in lag or stutter.
+
+To fix this, you can patch the file using
+[ChrisWak's patcher](https://github.com/eth0up/R6GameServicePatcher), or simply
+replace the file with an
+[already-patched version](https://github.com/willroberts/raven-shield-2020/blob/main/R6GameService.dll).
 
 ## The OpenRVS Registry
 
@@ -67,6 +105,15 @@ We have included a number of reusable UnrealScript2 libraries in OpenRVS:
 - OpenHTTPClient.uc: For sending HTTP requests and reading responses
 
 ## Version History
+
+#### Release 1.6
+
+- Replaces hardcoded IPs with DNS names for improved reliability
+- Updates the default server list to http://api.openrvs.org/servers
+- Updates the default beacon server to udp://api.openrvs.org:8080
+- Updates fallback server list
+- Updates documentation
+- Adds INI files to repo for easier packaging of releases
 
 #### Release 1.5
 
