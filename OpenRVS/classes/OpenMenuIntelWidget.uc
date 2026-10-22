@@ -6,10 +6,6 @@
 class OpenMenuIntelWidget extends R6MenuIntelWidget config(openrvs);
 
 var config bool bUseMPModsInSinglePlayer;//experimental
-//v1.4
-var int FOV;
-var string NewCheatManagerClass;
-var OpenFOV OpenFOV;
 
 // Candidate mod classes from ServerActors, and whether the level already
 // contains an instance of each. Used so one level scan covers all of them.
@@ -27,9 +23,6 @@ function ShowWindow()
 	local Actor A;
 	local bool bDuplicate;
 	local array<ModSpawnCheck> ModChecks;
-	local class<R6CheatManager> CheatClass;//1.4
-	local string s;//1.4
-	local class<R6PlayerController> CustomPC;//1.4
 	super.ShowWindow();
 	LoadConfig();
 	if ( bUseMPModsInSinglePlayer )
@@ -97,48 +90,7 @@ function ShowWindow()
 		}
 	}
 	//1.4
-	//this section duplicated in OpenMods
-	//in case a mod or map skips planning, this here won't run
-	OpenFOV = new class'OpenFOV';
-	FOV = OpenFOV.GetFOV();
-	NewCheatManagerClass = OpenFOV.GetCMClass();
-	OpenFOV = none;
-	if ( FOV != 0 )
-	{
-		FOV = clamp(FOV,65,140);
-		class'R6PlayerController'.default.DefaultFOV = FOV;
-		class'R6PlayerController'.default.DesiredFOV = FOV;
-	}
-	if ( NewCheatManagerClass == "" )
-		CheatClass = class'OpenCheat';
-	else
-	{
-		CheatClass = class<R6CheatManager>(DynamicLoadObject(NewCheatManagerClass,class'Class'));
-		if ( CheatClass == none )
-			CheatClass = class'OpenCheat';
-	}
-	if (class'OpenLogger'.static.IsDebugEnabled())
-		class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set to: "$CheatClass, self);
-	class'R6PlayerController'.default.CheatClass = CheatClass;
-	s = caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_PlayerCtrlToSpawn);
-	if ( ( s != "" ) && ( InStr(s,"R6ENGINE.") == -1 ) )//mod has custom pc
-	{
-		CustomPC = class<R6PlayerController>(DynamicLoadObject(class'Actor'.static.GetModMgr().m_pCurrentMod.m_PlayerCtrlToSpawn,class'Class'));
-		if ( CustomPC != none )
-		{
-			CustomPC.default.CheatClass = CheatClass;
-			if (class'OpenLogger'.static.IsDebugEnabled())
-				class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set for: " $ CustomPC, self);
-			if ( FOV != 0 )
-			{
-				FOV = clamp(FOV,65,140);
-				CustomPC.default.DefaultFOV = FOV;
-				CustomPC.default.DesiredFOV = FOV;
-			}
-		}
-	}
-	//FP WEAP FOV FIX
-	s = caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_GlobalHUDToSpawn);
-	if ( ( s == "" ) || ( s == "R6GAME.R6HUD" ) )
-		class'Actor'.static.GetModMgr().m_pCurrentMod.m_GlobalHUDToSpawn = "OpenRVS.OpenHUD";
+	// Applies the FOV fix and custom cheat manager, shared with OpenMods. This
+	// runs in case a mod or map skips planning.
+	class'OpenFOV'.static.ApplyClassDefaults(self);
 }
