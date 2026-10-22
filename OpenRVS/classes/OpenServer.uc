@@ -9,6 +9,15 @@ class OpenServer extends Actor config(BanList);
 
 var bool bLogged, bCracked;
 
+// Walk the controller list when players join or leave (NumPlayers and
+// NumSpectators change), and a few times per second so pawns that respawn
+// between rounds still get flagged. This used to happen on every frame.
+const PAWN_SCAN_INTERVAL = 0.25;
+
+var private int lastNumPlayers;
+var private int lastNumSpectators;
+var private float nextPawnScan;
+
 //log to server to make sure it's running
 event PreBeginPlay()
 {
@@ -36,14 +45,41 @@ event PostNetBeginPlay()
 //and fix it before the server attempts to send the info to Ubi master server
 function Tick(float delta)
 {
+	local bool bScanControllers;
+
+	super.Tick(delta);
+
+	// A join or leave changes one of these counters, so scan immediately
+	// instead of waiting for the next pawn pass.
+	bScanControllers = false;
+	if ( ( Level.Game.NumPlayers != lastNumPlayers ) || ( Level.Game.NumSpectators != lastNumSpectators ) )
+	{
+		lastNumPlayers = Level.Game.NumPlayers;
+		lastNumSpectators = Level.Game.NumSpectators;
+		bScanControllers = true;
+	}
+	// Nobody is connected, so there are no pawns to replicate and no CD keys
+	// to validate. The count check above will start the scans again on join.
+	if ( ( Level.Game.NumPlayers == 0 ) && ( Level.Game.NumSpectators == 0 ) )
+		return;
+	if ( Level.TimeSeconds >= nextPawnScan )
+	{
+		nextPawnScan = Level.TimeSeconds + PAWN_SCAN_INTERVAL;
+		bScanControllers = true;
+	}
+	if ( !bScanControllers )
+		return;
+
+	ScanControllers();
+}
+
+//find unvalidated players and flag living pawns as always relevant
+function ScanControllers()
+{
 	local Controller C;
 	local R6PlayerController P;
-	local R6AbstractGameManager A;
-	local R6GSServers G;
-	local R6GameInfo I;
-	local string s;
 	local Pawn Pawn;
-	super.Tick(delta);
+
 	C = Level.ControllerList;
 	while ( C != none )
 	{
