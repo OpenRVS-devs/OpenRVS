@@ -12,8 +12,8 @@
 // Instructions for using OpenHTTPClient:
 // 1. Write a callback function with the signature `function C(HttpResponse r)`.
 //    Your function can operate on the status code `r.Code` or the response
-//    body `r.Body`. This function should be added to the very bottom of this
-//    file.
+//    body lines `r.Lines`. This function should be added to the very bottom of
+//    this file.
 // 2. Add the name of your callback as a const in this class.
 // 3. Add a reference to your callback provider as a var in this class.
 // 4. Register your callback in the switch statement in triggerCallbacks().
@@ -36,13 +36,17 @@ struct ParsedURL
 struct HttpResponse
 {
 	var int Code;//e.g. 200 (OK) or 404 (Not Found)
-	var string Body;//response body
+	var array<string> Lines;//response body, split into lines
 };
 
 // A connection that is accepted but never answered would otherwise stay in
 // flight (and keep the client alive) for the rest of the session. Give up after
 // this many seconds and report an empty response (Code 0) so callers fall back.
 const HTTP_TIMEOUT = 30.0;
+
+// Real HTTP headers are a few hundred bytes at most. Cap the header search so a
+// malformed response that never ends its header cannot be copied without bound.
+const MAX_HEADER_BYTES = 8192;
 
 //
 // Instance Variables
@@ -126,8 +130,6 @@ event ReceivedText(string bytes)
 event Closed()
 {
 	local HttpResponse resp;
-	local string bytes;
-	local int i;
 
 	// Ignore late events once cleanup has started (for example after the
 	// timeout, or while the socket is being closed by Destroy()).
@@ -138,13 +140,7 @@ event Closed()
 
 	class'OpenLogger'.static.Debug("connection closed, data is ready", self);
 
-	// Merge paged response data.
-	for (i=0; i<kiloBuffer.Length; i++)
-	{
-		bytes = bytes $ kiloBuffer[i];
-	}
-
-	resp = parseHttpResponse(bytes);
+	resp = parseHttpResponse(kiloBuffer);
 	if (resp.Code == -1)//this is not an HTTP response
 	{
 		class'OpenLogger'.static.Debug("response was not HTTP, ignoring", self);
@@ -152,7 +148,7 @@ event Closed()
 		return;
 	}
 	if (class'OpenLogger'.static.IsDebugEnabled())
-		class'OpenLogger'.static.Debug("response received with length" @ Len(resp.Body), self);
+		class'OpenLogger'.static.Debug("response received with" @ resp.Lines.Length @ "body lines", self);
 	Response = resp;
 
 	if (Response.Code != 200)//warn and continue
@@ -306,12 +302,38 @@ private static function ParsedURL parseHttpUrl(string url)
 	return parsed;
 }
 
-// Parses an HTTP response string, returning the code and message body.
-private static function HttpResponse parseHttpResponse(string response)
+// Splits one response chunk into lines, appending complete lines to lines.
+// Returns the trailing incomplete line so a line that spans two chunks is not
+// lost. Only the current chunk is ever sliced, so the whole body is never copied
+// repeatedly.
+private static function string splitLines(string chunk, string carry, out array<string> lines)
+{
+	local int i;//index of the next line break
+
+	i = InStr(chunk, Chr(10));
+	while (i != -1)
+	{
+		lines[lines.Length] = carry $ Left(chunk, i);
+		carry = "";
+		chunk = Mid(chunk, i+1);
+		i = InStr(chunk, Chr(10));
+	}
+	return carry $ chunk;//keep the incomplete line for the next chunk
+}
+
+// Parses an HTTP response, returning the code and the body split into lines.
+// The body arrives in 999-byte chunks, so only the (small, capped) header is
+// concatenated; the body is split into lines chunk by chunk. Concatenating every
+// chunk into one growing string would copy the body O(n^2) times.
+private static function HttpResponse parseHttpResponse(array<string> chunks)
 {
 	local string CRLF;
 	local HttpResponse resp;
-	local int bodyStartsAt;
+	local string header;//response up to and including the end of the header
+	local string carry;//line that continues in the next chunk
+	local array<string> lines;
+	local int headerEnd;//index of the blank line that ends the header
+	local int i;
 
 	// HTTP response format:
 	// First line is "HTTP/1.0 <HTTP CODE>" + CRLF e.g. "HTTP/1.0 200 OK"
@@ -319,17 +341,37 @@ private static function HttpResponse parseHttpResponse(string response)
 	// Next line is CRLF only.
 	// Remaining lines are HTTP response body.
 
-	if (Left(response, 4) != "HTTP")//this is not an HTTP response
-	{
-		resp.Code = -1;
+	resp.Code = -1;//not an HTTP response unless proven otherwise
+	if (chunks.Length == 0)
 		return resp;
-	}
-	resp.Code = int(Mid(response, 9, 11));//response code is always these three characters.
+	if (Left(chunks[0], 4) != "HTTP")//this is not an HTTP response
+		return resp;
 
-	// Two CRLF in a row precede response body.
+	// Find the blank line that ends the header. It may span two chunks, so
+	// search the chunks joined so far.
 	CRLF = Chr(13) $ Chr(10);
-	bodyStartsAt = InStr(response, CRLF $ CRLF);
-	resp.Body = Mid(response, bodyStartsAt+4);//4=bytes of CR LF CR LF
+	for (i = 0; i < chunks.Length; i++)
+	{
+		header = header $ chunks[i];
+		headerEnd = InStr(header, CRLF $ CRLF);
+		if (headerEnd != -1)
+			break;
+		if (Len(header) > MAX_HEADER_BYTES)//malformed response; do not keep growing
+			return resp;
+	}
+	if (headerEnd == -1)//no blank line, so this is not a complete HTTP response
+		return resp;
+
+	resp.Code = int(Mid(header, 9, 11));//response code is always these three characters.
+
+	// Split the body into lines. The body starts in the chunk where the header
+	// ended, so use the rest of that chunk; the remaining chunks are used as-is.
+	carry = splitLines(Mid(header, headerEnd+4), carry, lines);//4=bytes of CR LF CR LF
+	for (i = i+1; i < chunks.Length; i++)
+		carry = splitLines(chunks[i], carry, lines);
+	if (carry != "")//body did not end with a line break
+		lines[lines.Length] = carry;
+	resp.Lines = lines;
 
 	return resp;
 }

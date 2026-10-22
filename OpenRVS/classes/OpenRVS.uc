@@ -34,9 +34,13 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 		return;
 	}
 
-	// Trim the line break.
-	latest = resp.Body;
-//	latest = Left(latest, Len(latest)-1);//WHAT IS THIS? No line break, just trims the 4 out of "v1.4"
+	// The response body is the latest version string, e.g. "v1.6".
+	if (resp.Lines.Length == 0)
+	{
+		class'OpenLogger'.static.Error("latest version response was empty", self);
+		return;
+	}
+	latest = resp.Lines[0];
 
 	// Log version information to file.
 	// TODO: Also display a popup.

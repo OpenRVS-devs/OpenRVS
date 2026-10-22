@@ -69,7 +69,7 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 	}
 
 	class'OpenLogger'.static.Info("loading servers from Internet", self);
-	class'OpenString'.static.Split(resp.Body, Chr(10), lines);
+	lines = resp.Lines;//the client already split the body into lines
 	class'OpenLogger'.static.Info("parsing" @ lines.Length @ "server lines", self);
 
 	// Determine response type.
