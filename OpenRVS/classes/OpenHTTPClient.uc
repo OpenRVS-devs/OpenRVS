@@ -2,9 +2,11 @@
 // The base game only uses UDP, so this is only used by us.
 // TcpLink extends InternetLink extends InternetInfo extends Info extends Actor.
 // Use Spawn(class'OpenHTTPClient') to get an instance.
-// HTTP clients store an HttpResponse, an array<string> buffer, and a reference
-// to each callback provider. These are all reused and should not be set to None
-// after use. Instead, set your HTTP client instance to None with finished.
+// Each OpenHTTPClient handles exactly one request. Once the callback has run,
+// the client resets itself and destroys the actor, so callers should treat
+// their reference as dead after that point (set it to None in the callback).
+// Spawn a new client for every request; never keep one around after it has
+// finished, or it will tick forever without doing anything.
 // WARNING: UE2 only supports HTTP 1.0; HTTP 1.1 connections won't close before
 // timing out.
 // Instructions for using OpenHTTPClient:
@@ -36,6 +38,11 @@ struct HttpResponse
 	var int Code;//e.g. 200 (OK) or 404 (Not Found)
 	var string Body;//response body
 };
+
+// A connection that is accepted but never answered would otherwise stay in
+// flight (and keep the client alive) for the rest of the session. Give up after
+// this many seconds and report an empty response (Code 0) so callers fall back.
+const HTTP_TIMEOUT = 30.0;
 
 //
 // Instance Variables
@@ -77,10 +84,11 @@ event ResolveFailed()
 {
 	super.ResolveFailed();
 
-	class'OpenLogger'.static.Error("dns resolution failed", self);
-	triggerCallbacks();//caller still needs to process a result
+	if ( bPendingDelete || bDeleteMe )//cleanup already started, nothing to report
+		return;
 
-	super.Destroy();//clean up the connection
+	class'OpenLogger'.static.Error("dns resolution failed", self);
+	triggerCallbacks();//caller still needs to process a result; this also destroys the client
 }
 
 // Opened: Called when socket successfully connects.
@@ -120,6 +128,11 @@ event Closed()
 	local string bytes;
 	local int i;
 
+	// Ignore late events once cleanup has started (for example after the
+	// timeout, or while the socket is being closed by Destroy()).
+	if ( bPendingDelete || bDeleteMe )
+		return;
+
 	super.Closed();
 
 	class'OpenLogger'.static.Debug("connection closed, data is ready", self);
@@ -132,7 +145,11 @@ event Closed()
 
 	resp = parseHttpResponse(bytes);
 	if (resp.Code == -1)//this is not an HTTP response
-		return;//not relevant to HTTP client
+	{
+		class'OpenLogger'.static.Debug("response was not HTTP, ignoring", self);
+		finishRequest();//one client per request, so clean up either way
+		return;
+	}
 	class'OpenLogger'.static.Debug("response received with length" @ Len(resp.Body), self);
 	Response = resp;
 
@@ -142,12 +159,21 @@ event Closed()
 	triggerCallbacks();
 }
 
+// Fires when a request takes too long (see HTTP_TIMEOUT). Reports the empty
+// response so the caller can fall back, then cleans up like any other request.
+event Timer()
+{
+	class'OpenLogger'.static.Error("http request timed out", self);
+	triggerCallbacks();
+}
+
 //
 // Custom Functions
 //
 
 // SendRequest() sends an HTTP request to the given URL. The response can be
 // passed to your code in triggerCallbacks(). Returns true on success.
+// A client only handles one request; spawn another one for the next request.
 function bool SendRequest(string url)
 {
 	local ParsedURL parsed;
@@ -159,6 +185,7 @@ function bool SendRequest(string url)
 		return false;
 	}
 	requestInFlight = true;
+	SetTimer(HTTP_TIMEOUT, false);//do not wait forever for a silent server
 
 	kiloBuffer.Remove(0, kiloBuffer.Length);
 
@@ -184,12 +211,14 @@ function bool SendRequest(string url)
 }
 
 // Fires any matching callbacks. Register new callbacks here.
+// This is the last thing a request does: the client is destroyed afterwards.
 private function triggerCallbacks()
 {
 	if (CallbackName == "")
 	{
 		class'OpenLogger'.static.Debug("callback name was empty", self);
-		return;//nothing to do
+		finishRequest();//nothing to call, but still clean up
+		return;
 	}
 	switch (CallbackName)
 	{
@@ -207,10 +236,19 @@ private function triggerCallbacks()
 			break;
 	}
 
-	resetHttpClient();//all done, get ready for next request
+	finishRequest();//all done, release the actor
 }
 
-// Resets and unlocks the instance to be used for the next request.
+// Resets the instance and destroys it. A client is spawned per request and has
+// nothing left to do after its callback, so keeping it alive would only leave
+// an idle ticking TcpLink actor behind for the rest of the session.
+private function finishRequest()
+{
+	resetHttpClient();
+	Destroy();
+}
+
+// Clears the per-request state before the client is destroyed.
 private function resetHttpClient()
 {
 	local HttpResponse emptyResp;
@@ -317,4 +355,12 @@ function VersionCheckCallback(HttpResponse resp)
 		return;//nothing to do
 	}
 	VersionCheckCallbackProvider.CheckVersion(resp);
+}
+
+defaultproperties
+{
+	// TcpLink turns this on by default, which keeps the actor ticking even in
+	// players-only mode. Socket polling does not need that here: the client only
+	// lives while a request is in flight, so let it tick like any other actor.
+	bAlwaysTick=False
 }

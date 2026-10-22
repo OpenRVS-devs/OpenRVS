@@ -26,6 +26,8 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 	local string warning;
 	local OpenPopUpWindow WarningWindow;
 
+	httpc = none;//the client destroys itself once this callback returns
+
 	if (resp.Code != 200)
 	{
 		class'OpenLogger'.static.Error("failed to retrieve latest version over http", self);

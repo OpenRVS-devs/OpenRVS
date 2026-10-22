@@ -43,6 +43,9 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 	else
 		FileName = "servers";
 
+	// Each client handles one request and destroys itself once the response has
+	// been delivered, so spawning here on every Init() does not accumulate
+	// actors. The callback in ParseServers() clears our reference.
 	httpc = Spawn(class'OpenHTTPClient');
 	httpc.CallbackName = "server_list";
 	httpc.ServerListCallbackProvider = self;
@@ -55,7 +58,7 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 {
 	local array<string> lines;
 
-	httpc = none;//done with HTTP client
+	httpc = none;//done with HTTP client; it destroys itself once this callback returns
 
 	//Check for errors.
 	if (resp.Code != 200)
