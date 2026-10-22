@@ -30,6 +30,7 @@ struct GInfo
 	var string HText;//tooltip text
 };
 var array<GInfo> NewTypes;//all the new game type mods we find
+var private bool bLoadedGameTypes;//.game files are only read once per widget
 
 //finds all *.game files and uses them to populate the list of modded game types
 function LoadNewGameTypes()
@@ -38,6 +39,11 @@ function LoadNewGameTypes()
 	local int i,iFiles;
 	local string szIniFilename;
 	local GInfo Temp;
+	// Avoid walking the Mods directory and reading every .game file again.
+	if ( bLoadedGameTypes )
+		return;
+	bLoadedGameTypes = true;
+	NewTypes.Length = 0;
 	pFileManager = new(none) class'R6FileManager';
 	iFiles = pFileManager.GetNbFile("..\\Mods\\","game");
 	for ( i = 0; i < iFiles; i++ )
@@ -73,20 +79,25 @@ function CreateButtons()
 	fHeight = 25;
 	fYPos = 64;
 	super.CreateButtons();//create the default buttons before cycling through *.game files looking for a new game mode to create
-	LoadNewGameTypes();
-	i = 0;
-	while ( i < NewTypes.length )
+	// Only create the custom buttons once. Rebuilding them on every call
+	// duplicated the entries in CustomTypeBut and left the old buttons behind.
+	if ( CustomTypeBut.length == 0 )
 	{
-		Temp = R6WindowButton(CreateControl(class'R6WindowButton',fXOffset,(fYOffset*(i+1))+142,fWidth,fHeight,self));
-		Temp.ToolTipString = NewTypes[i].HText;
-		Temp.Text = NewTypes[i].BText;
-		Temp.m_iButtonID = 99 + i;
-		Temp.Align = TA_Left;
-		Temp.m_buttonFont = m_LeftButtonFont;
-		Temp.CheckToDownSizeFont(m_LeftDownSizeFont,0);
-		Temp.ResizeToText();
-		CustomTypeBut[CustomTypeBut.length] = Temp;
-		i++;
+		LoadNewGameTypes();
+		i = 0;
+		while ( i < NewTypes.length )
+		{
+			Temp = R6WindowButton(CreateControl(class'R6WindowButton',fXOffset,(fYOffset*(i+1))+142,fWidth,fHeight,self));
+			Temp.ToolTipString = NewTypes[i].HText;
+			Temp.Text = NewTypes[i].BText;
+			Temp.m_iButtonID = 99 + i;
+			Temp.Align = TA_Left;
+			Temp.m_buttonFont = m_LeftButtonFont;
+			Temp.CheckToDownSizeFont(m_LeftDownSizeFont,0);
+			Temp.ResizeToText();
+			CustomTypeBut[CustomTypeBut.length] = Temp;
+			i++;
+		}
 	}
 	i = 0;
 	while ( i < CustomTypeBut.length )

@@ -10,6 +10,7 @@ var config string ForceStartMod;
 var int FOV;
 var string NewCheatManagerClass;
 var OpenFOV OpenFOV;
+var private bool bScannedMods;//.mod files are only read once per widget
 
 //cycles through all *.mod files in Mods folder
 //and unlocks them for use
@@ -25,25 +26,32 @@ function SetMenuMODS()
 	local class<R6PlayerController> CustomPC;//1.4
 	local bool bFound;
 	pModManager = class'Actor'.static.GetModMgr();
-	pFileManager = new(none) class'R6FileManager';
-	iFiles = pFileManager.GetNbFile("..\\Mods\\","mod");
-	for ( i2 = 0; i2 < iFiles; i2++ )
+	// Scan the Mods directory and read each .mod file only once. This ran
+	// every time the Mods page was initialized, even though the entries it
+	// adds are kept in the mod manager.
+	if ( !bScannedMods )
 	{
-		pFileManager.GetFileName(i2,szIniFilename);
-		if ( szIniFilename != "" )
+		bScannedMods = true;
+		pFileManager = new(none) class'R6FileManager';
+		iFiles = pFileManager.GetNbFile("..\\Mods\\","mod");
+		for ( i2 = 0; i2 < iFiles; i2++ )
 		{
-			aMod = new(none) class'Engine.R6Mod';
-			aMod.Init(szIniFilename);
-			j = 0;
-			bFound = false;
-			while ( j < pModManager.GetNbMods() )
+			pFileManager.GetFileName(i2,szIniFilename);
+			if ( szIniFilename != "" )
 			{
-				if ( pModManager.m_aMods[j].m_szKeyWord == aMod.m_szKeyWord )
-				bFound = true;
-				j++;
+				aMod = new(none) class'Engine.R6Mod';
+				aMod.Init(szIniFilename);
+				j = 0;
+				bFound = false;
+				while ( j < pModManager.GetNbMods() )
+				{
+					if ( pModManager.m_aMods[j].m_szKeyWord == aMod.m_szKeyWord )
+					bFound = true;
+					j++;
+				}
+				if ( !bFound )
+				pModManager.m_aMods[pModManager.m_aMods.length] = aMod;
 			}
-			if ( !bFound )
-			pModManager.m_aMods[pModManager.m_aMods.length] = aMod;
 		}
 	}
 	super.SetMenuMODS();
