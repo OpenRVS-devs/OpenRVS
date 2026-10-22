@@ -8,6 +8,11 @@
 
 class OpenMultiPlayerWidget extends R6MenuMultiPlayerWidget;
 
+// Minimum time between full server listbox rebuilds, in seconds. Server info
+// arrives one response at a time; without this, ReceiveServerInfo() rebuilds
+// the whole list once per server.
+const LIST_REBUILD_INTERVAL = 0.25;
+
 struct AServer
 {
 	var string ServerName;
@@ -19,6 +24,7 @@ struct AServer
 	var string szMap;//1.5 - map name
 	var bool bWrongVersion;//1.5 - running same expansion mod - for future use? - needs to be inverted so only true value will trigger changing the menu
 	var int iPing;//1.5 - ping
+	var bool bAdversarial;//1.7 - GameMode classification, computed once when the server is added
 };
 var array<AServer> ServerList;//1.3 - not config - config is now in openserverlist, which handles loading the backup list
 var config string ServerURL;//0.8 server list URL to load
@@ -28,6 +34,8 @@ var array<string> OpenQueries;//1.5 keep track of servers we've queried
 var OpenTimer Timer;//1.5 ping update
 var OpenServerList OS;//moved here from local - because needed in tab switching function
 var bool bNeedsExtraRefresh;//if going from lan tab to internet, we need an extra refresh forced after the server list is fetched
+var bool bListDirty;//1.7 - a server response arrived; rebuild the listbox on the next Paint()
+var float fLastListRebuild;//1.7 - time of the last rebuild, used to coalesce response bursts
 
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
@@ -71,6 +79,7 @@ function NoServerList()
 function ClearServerList()
 {
 	ServerList.remove(0,ServerList.length);
+	bListDirty = false;//1.7 - nothing left to rebuild
 }
 
 // Adds a server to the list.
@@ -86,6 +95,7 @@ function AddServerToList(string sn, string sip, string sm)
 	Temp.IP = sip;
 	Temp.GameMode = sm;
 	Temp.iPing = 1000;//1.5 - don't let iPing initialize with null value of 0 - for sorting. If server responds, this value will be set to actual ping
+	Temp.bAdversarial = ( InStr(caps(sm),"ADV") != -1 );//1.7 - cache the classification; GameMode never changes after this
 	ServerList[ServerList.length] = Temp;
 }
 
@@ -100,6 +110,16 @@ function FinishedServers()
 		bNeedsExtraRefresh = false;
 		Refresh(false);
 	}
+}
+
+// Paint() is called every frame while this widget is visible. If new server
+// info arrived since the last rebuild, rebuild here at most once per
+// LIST_REBUILD_INTERVAL instead of once per response.
+function Paint(Canvas C, float X, float Y)
+{
+	if ( bListDirty && ( GetLevel().TimeSeconds - fLastListRebuild ) >= LIST_REBUILD_INTERVAL )
+		GetGSServers();
+	super.Paint(C,X,Y);
 }
 
 // GetGSServers() retrieves the current list of servers from the GameService.
@@ -122,6 +142,10 @@ function GetGSServers()
 	local int iNbPages;
 	local int iStartingIndex,iEndIndex;
 	local R6ServerList.stGameServer _stGameServer;
+	local string szModeAdv,szModeCoop;//1.7 - Localize once per rebuild, not once per item
+
+	bListDirty = false;//1.7 - this rebuild satisfies any pending request
+	fLastListRebuild = GetLevel().TimeSeconds;
 
 	InitServerList();//needed here to prevent big accessed nones!
 	console = R6Console(Root.Console);
@@ -162,6 +186,9 @@ function GetGSServers()
 	//if ( iEndIndex > iNumServersDisplay )
 	//	iEndIndex = iNumServersDisplay;
 
+	szModeAdv = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
+	szModeCoop = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
+
 	i = 0;
 	while ( i < ServerList.length )
 	{
@@ -181,10 +208,10 @@ function GetGSServers()
 		NewItem.bPunkBuster = false;
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
 		NewItem.szGameType = ServerList[i].szGameType;//"";//1.5 change
-		if ( InStr(caps(ServerList[i].GameMode),"ADV") != -1 )
-			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
+		if ( ServerList[i].bAdversarial )
+			NewItem.szGameMode = szModeAdv;
 		else
-			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
+			NewItem.szGameMode = szModeCoop;
 		// If selected server is still in list, reset this item
 		// to be the selcted server.	By default the selected server will
 		// be the first server in the list.
@@ -390,7 +417,10 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 		}
 		i++;
 	}
-	GetGSServers();
+	//1.7 - do not rebuild the whole listbox for every response. Paint() will
+	//do one rebuild for the whole burst, at most once per LIST_REBUILD_INTERVAL.
+	if ( m_ConnectionTab == TAB_Internet_Server )
+		bListDirty = true;
 }
 
 // InitServerList() creates a window for the server list. It is called by
