@@ -42,7 +42,8 @@ function RegisterServer()
 	} else {
 		// Register by IP without waiting for the Resolve() event.
 		addr.Port = RegistryServerPort;
-		class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
+		if (class'OpenLogger'.static.IsDebugEnabled())
+			class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
 		BroadcastBeacon(addr);
 		class'OpenLogger'.static.Debug("registration beacon sent", self);
 	}
@@ -51,7 +52,8 @@ function RegisterServer()
 event Resolved(IpAddr addr)
 {
 	addr.Port = RegistryServerPort;
-	class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
 	BroadcastBeacon(addr);
 	class'OpenLogger'.static.Debug("registration beacon sent", self);
 }
@@ -66,7 +68,8 @@ event ReceivedText(IpAddr Addr, string Text)
 	local R6ServerInfo pServerOptions;
 	local BOOL bServerResistered;
 	pServerOptions = class'Actor'.static.GetServerOptions();
-	class'OpenLogger'.static.Debug("OpenBeacon received text:" @ Text, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("OpenBeacon received text:" @ Text, self);
 	if (Text == "REPORT")
 		BroadcastBeacon(Addr);
 	if (Text == "REPORTQUERY")

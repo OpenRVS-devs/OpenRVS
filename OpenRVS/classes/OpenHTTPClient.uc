@@ -116,7 +116,8 @@ event ReceivedText(string bytes)
 {
 	super.ReceivedText(bytes);
 
-	class'OpenLogger'.static.Debug("text received. size:" @ Len(bytes) @ "bytes", self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("text received. size:" @ Len(bytes) @ "bytes", self);
 	kiloBuffer[kiloBuffer.Length] = bytes;
 }
 
@@ -150,7 +151,8 @@ event Closed()
 		finishRequest();//one client per request, so clean up either way
 		return;
 	}
-	class'OpenLogger'.static.Debug("response received with length" @ Len(resp.Body), self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("response received with length" @ Len(resp.Body), self);
 	Response = resp;
 
 	if (Response.Code != 200)//warn and continue
@@ -196,7 +198,8 @@ function bool SendRequest(string url)
 	Host = parsed.Host;
 	Port = parsed.Port;
 	Path = parsed.Path;
-	class'OpenLogger'.static.Debug("sending request to http://" $ Host $ ":" $ Port $ Path, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("sending request to http://" $ Host $ ":" $ Port $ Path, self);
 
 	BindPort();//create client socket
 	LinkMode = MODE_Text;
@@ -232,7 +235,8 @@ private function triggerCallbacks()
 			VersionCheckCallback(Response);
 			break;
 		default:
-			class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
+			if (class'OpenLogger'.static.IsDebugEnabled())
+				class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
 			break;
 	}
 

@@ -57,7 +57,8 @@ function StartTimer(string id)
 	for ( i=Timings.Length-1; i>lo; i-- )
 		Timings[i] = Timings[i-1];
 	Timings[lo] = t;//Save this timing entry.
-	class'OpenLogger'.static.Debug("started timer with id" @ t.ID @ "at time" @ t.StartTime, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("started timer with id" @ t.ID @ "at time" @ t.StartTime, self);
 }
 
 // Stop the clock and return the elapsed duration in milliseconds
@@ -92,11 +93,13 @@ function int EndTimer(string id)
 
 	if (!found)
 	{
-		class'OpenLogger'.static.Debug("timing not found with id=" $ id, self);
+		if (class'OpenLogger'.static.IsDebugEnabled())
+			class'OpenLogger'.static.Debug("timing not found with id=" $ id, self);
 		return ERR_VALUE;
 	}
 
-	class'OpenLogger'.static.Debug("timing '" $ t.ID $ "' had start time" @ t.StartTime $ ", end time" @ endTime $ ", and duration" @ endTime - t.StartTime, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("timing '" $ t.ID $ "' had start time" @ t.StartTime $ ", end time" @ endTime $ ", and duration" @ endTime - t.StartTime, self);
 	Timings.Remove(i, 1);//We are done with this timing entry.
 	return endTime - t.StartTime;
 }
@@ -104,5 +107,6 @@ function int EndTimer(string id)
 // Write the current time (in ms since level start) to the log file.
 function LogTime()
 {
-	class'OpenLogger'.static.Debug("the time is now" @ int(ClockSource.TimeSeconds*1000), self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("the time is now" @ int(ClockSource.TimeSeconds*1000), self);
 }

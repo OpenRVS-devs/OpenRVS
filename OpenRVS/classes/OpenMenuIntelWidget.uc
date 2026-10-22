@@ -77,7 +77,8 @@ function ShowWindow()
 		if ( CheatClass == none )
 			CheatClass = class'OpenCheat';
 	}
-	class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set to: "$CheatClass, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set to: "$CheatClass, self);
 	class'R6PlayerController'.default.CheatClass = CheatClass;
 	s = caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_PlayerCtrlToSpawn);
 	if ( ( s != "" ) && ( InStr(s,"R6ENGINE.") == -1 ) )//mod has custom pc
@@ -86,7 +87,8 @@ function ShowWindow()
 		if ( CustomPC != none )
 		{
 			CustomPC.default.CheatClass = CheatClass;
-			class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set for: " $ CustomPC, self);
+			if (class'OpenLogger'.static.IsDebugEnabled())
+				class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set for: " $ CustomPC, self);
 			if ( FOV != 0 )
 			{
 				FOV = clamp(FOV,65,140);

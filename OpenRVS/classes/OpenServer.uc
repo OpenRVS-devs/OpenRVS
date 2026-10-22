@@ -145,7 +145,8 @@ function bool HandleBans(R6PlayerController P)
 	//TO DO:
 	//log the time of joining as well
 	class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is:" @ left(s,InStr(s,":")), self);
-	class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
 		if ( Level.Game.AccessControl.Banned[i] ~= Left(P.m_szGlobalID,Len(Level.Game.AccessControl.Banned[i])) )

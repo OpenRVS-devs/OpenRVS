@@ -75,7 +75,8 @@ function Manager( UWindowWindow _pCurrentWidget )
 		// Response has been received from the server
 		if ( m_GameService.m_ClientBeacon.PreJoinInfo.bResponseRcvd )
 		{
-			class'OpenLogger'.static.Debug("INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer, self);
+			if (class'OpenLogger'.static.IsDebugEnabled())
+				class'OpenLogger'.static.Debug("INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer, self);
 			// Verify that the server is the same version as the game
 			if ( Root.Console.ViewportOwner.Actor.GetGameVersion() != m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion )
 			{

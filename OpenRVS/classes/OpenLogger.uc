@@ -27,13 +27,23 @@ static function Info(string s, optional Object o)
 }
 
 // Use Debug() for messages only developers should see.
-// Disable debug logging for releases by changing the default property below.
+// Enable debug logging for development builds in IsDebugEnabled() below.
 static function Debug(string s, optional Object o)
+{
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		writeMsg(s, LOG_LEVEL_DEBUG, o);
+}
+
+// IsDebugEnabled reports whether Debug() writes messages. Call sites that build
+// their message with string concatenation must check this first, otherwise the
+// arguments are evaluated even when debug logging is disabled:
+//   if (class'OpenLogger'.static.IsDebugEnabled())
+//       class'OpenLogger'.static.Debug("value is " $ value, self);
+static function bool IsDebugEnabled()
 {
 	local bool debugMode;
 	debugMode = false;//WARNING: Set to false before building releases for users!
-	if (debugMode)
-		writeMsg(s, LOG_LEVEL_DEBUG, o);
+	return debugMode;
 }
 
 // writeMsg consistently formats OpenRVS logs, prepending the name of the caller
