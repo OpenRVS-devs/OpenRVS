@@ -56,7 +56,7 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 		WarningWindow.AddText(warning);
 		WarningWindow.AddText("Click the link below to download the latest update.");
 		WarningWindow.AddText("");
-		WarningWindow.MakeURLButton("https://www.moddb.com/search?q=openrvs","Download from ModDB");
+		WarningWindow.MakeURLButton("https://github.com/OpenRVS-devs/OpenRVS/releases","Download from GitHub");
 	}
 	else
 		class'OpenLogger'.static.Info("OpenRVS is up to date (" $ latest $ ")", self);
