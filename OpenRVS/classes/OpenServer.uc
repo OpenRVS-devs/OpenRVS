@@ -23,6 +23,21 @@ event PreBeginPlay()
 {
 	local OpenRVS openrvs;
 
+	// Listen hosts can inherit the single-player HUD from the client menus.
+	// Select the legacy multiplayer HUD here so OpenRenderFix can remain
+	// byte-for-byte compatible with older dedicated servers and clients.
+	// Use a string to avoid adding a package dependency; preserve mod HUDs.
+	if ( Level.NetMode == NM_ListenServer )
+	{
+		if ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_GlobalHUDToSpawn) == "OPENRVS.OPENHUD" )
+			class'Actor'.static.GetModMgr().m_pCurrentMod.m_GlobalHUDToSpawn = "OpenRenderFix.OpenRender";
+	}
+
+	// The native NETSPEED receiver also caps requests against the server's
+	// Player default, independently of TcpNetDriver.MaxClientRate.
+	class'Player'.default.ConfiguredInternetSpeed = 100000;
+	class'Player'.default.ConfiguredLanSpeed = 100000;
+
 	openrvs = new class'OpenRVS';
 	openrvs.Init(self);//initialize OpenRVS
 	openrvs = none;//done initializing

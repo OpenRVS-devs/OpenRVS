@@ -26,6 +26,23 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 4. Launch the game! You'll see a list of servers to choose from, or you can join
    by IP address.
 
+## Client Network Rate
+
+OpenRVS requests 100,000 bytes/sec when joining through the multiplayer server
+browser or Join IP dialog, overriding the menu's legacy T1/T3 preset (20,000).
+The server still caps the negotiated rate with `[IpDrv.TcpNetDriver]`
+`MaxClientRate`. Its native NETSPEED receiver also caps requests against the
+server's `[Engine.Player] ConfiguredInternetSpeed` default. OpenRVS sets that
+server-side default to 100,000 at startup; keep `MaxClientRate=100000` in the
+server's active INI. Updating only the server's OpenRVS does not change clients'
+requested rates. Client updates must include `R6ClassDefines.ini` as well as
+`OpenRVS.u`: `ClassMenuCDKeyManager` must select
+`class'OpenRVS.OpenMenuCDKeyManager'`. The client log records
+`Joining server with client netspeed 100000` when this hook runs.
+The override runs before menu-based joins; direct console `open` commands bypass
+it, and changing connection speed in the options menu during a session can lower
+the current rate again. Use `netspeed 100000` for an immediate in-session change.
+
 ## Installing or Updating OpenRVS (Server Instructions)
 
 1. Download the latest release ZIP from the
@@ -43,8 +60,9 @@ ServerActors=OpenRenderFix.OpenFix
 ServerPackages=OpenRenderFix
 ```
    Apply these settings to listen hosts started through the in-game menu too.
-   `OpenRenderFix.OpenFix` replaces the host's local `OpenRVS.OpenHUD` with
-   `OpenRenderFix.OpenRender`; `ServerPackages=OpenRenderFix` makes that HUD
+   On listen servers only, `OpenRVS.OpenServer` replaces the host's local
+   `OpenRVS.OpenHUD` with `OpenRenderFix.OpenRender`;
+   `ServerPackages=OpenRenderFix` makes that HUD
    package available to joining clients. Keep both settings together. HUDs
    supplied by other mods are preserved.
 5. Edit `system/RavenShield.ini`, and ensure that your `ServerBeaconPort` is set
@@ -103,7 +121,13 @@ The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories
 1. Copy `OpenRVS.u` and/or `OpenRenderFix.u` to your game directory's `system` folder (both client and server)
 1. Test your changes in-game by connecting to the server
 
-Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to weapon rendering in multiplayer.
+For compatible releases, reuse the exact OpenRenderFix binary distributed with
+v1.6, renamed from `OpenRenderFix.utx` to `OpenRenderFix.u`. Do not recompile
+that package for distribution: reverting its source does not restore the released
+package identity. The build copies and verifies the pinned binary in `vendor/OpenRenderFix-v1.6`
+instead of compiling or stripping it. `make release` rejects any different binary. Keep only one
+copy installed. Changes to this shared package require a separate compatibility
+plan and cross-version join testing.
 
 To enable debug logging, set `DebugMode=True` under `[OpenRVS.OpenLogger]` in `openrvs.ini`, then restart the game or server. The default is `False`.
 

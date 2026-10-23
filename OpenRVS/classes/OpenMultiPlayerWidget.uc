@@ -32,7 +32,6 @@ struct AServer
 	var int iMaxPlayers,iNumPlayers;//1.5 - max players/current players
 	var string szGameType;//1.5 - localized game mode name
 	var string szMap;//1.5 - map name
-	var bool bWrongVersion;//1.5 - running same expansion mod - for future use? - needs to be inverted so only true value will trigger changing the menu
 	var int iPing;//1.5 - ping
 	var bool bAdversarial;//1.7 - GameMode classification, computed once when the server is added
 	var bool bQueryPending;//1.7 - a beacon query is in flight for this server
@@ -175,7 +174,7 @@ function Paint(Canvas C, float X, float Y)
 
 	m_ButtonJoin.bDisabled = true;
 	if ( m_ServerListBox.m_SelectedItem != None )
-		m_ButtonJoin.bDisabled = !R6WindowListServerItem(m_ServerListBox.m_SelectedItem).bSameVersion;
+		m_ButtonJoin.bDisabled = false;
 	UpdateInternetServerInfo();
 }
 
@@ -192,7 +191,6 @@ function ReceiveServerDetails(string Address, R6ServerList.stGameData Data)
 			ServerList[i].Details = Data;
 			ServerList[i].bHasDetails = true;
 			ServerList[i].bAdversarial = Data.bAdversarial;
-			ServerList[i].bWrongVersion = !IsCompatibleServer(Data);
 			if ( m_ConnectionTab == TAB_Internet_Server )
 				bListDirty = true;
 			if ( Address == DetailAddress )
@@ -235,13 +233,76 @@ function UpdateInternetServerInfo()
 	}
 }
 
-// Version and mod must both match; an omitted version is unknown rather
-// than proof of compatibility. Use raw protocol values, never localized text.
+// Snapshot only the attempted address, before travel can recreate the menus.
+function string GetJoinCompatibilityInfo(string Address)
+{
+	local int i;
+	local string Version, ModName, LocalMod, Info;
+
+	Version = m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion;
+	if ( InStr(Address, ":") == -1 )
+		Address = Address $ ":7777";
+	for ( i = 0; i < ServerList.Length; i++ )
+	{
+		if ( ServerList[i].IP == Address && ServerList[i].bHasDetails )
+		{
+			if ( Version == "" )
+				Version = ServerList[i].Details.szGameVersion;
+			ModName = ServerList[i].Details.szModName;
+			break;
+		}
+	}
+	if ( ModName == "" && m_LanServers != None )
+	{
+		for ( i = 0; i < m_LanServers.m_GameServerList.Length; i++ )
+		{
+			if ( m_LanServers.m_GameServerList[i].szIPAddress == Address )
+			{
+				if ( Version == "" )
+					Version = m_LanServers.m_GameServerList[i].sGameData.szGameVersion;
+				ModName = m_LanServers.m_GameServerList[i].sGameData.szModName;
+				break;
+			}
+		}
+	}
+	LocalMod = class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord;
+	if ( Version != "" && !(Version ~= class'Actor'.static.GetGameVersion()) )
+		Info = "Server game version: " $ Version $ "; yours: " $ class'Actor'.static.GetGameVersion() $ ".";
+	if ( ModName != "" && !(ModName ~= LocalMod) )
+		Info = Info @ "Server mod: " $ ModName $ "; active mod: " $ LocalMod $ ".";
+	return Info;
+}
+
+// Preserve the engine's localized failure and add advisory beacon information.
+function PromptConnectionError()
+{
+	local string Info;
+	local R6MenuRootWindow MenuRoot;
+
+	Info = class'OpenMenuCDKeyManager'.default.JoinCompatibilityInfo;
+	class'OpenMenuCDKeyManager'.default.JoinCompatibilityInfo = "";
+	super.PromptConnectionError();
+	if ( Info == "" )
+		return;
+	MenuRoot = R6MenuRootWindow(Root);
+	MenuRoot.m_RSimplePopUp.H = 160;
+	MenuRoot.m_pSimplePopUp.ModifyPopUpFrameWindow(
+		Localize("MultiPlayer","Popup_Error_Title","R6Menu"), 25,
+		MenuRoot.m_RSimplePopUp.X, MenuRoot.m_RSimplePopUp.Y,
+		MenuRoot.m_RSimplePopUp.W, MenuRoot.m_RSimplePopUp.H, MessageBoxButtons.MB_OK);
+	R6WindowWrappedTextArea(MenuRoot.m_pSimplePopUp.m_ClientArea).AddText(
+		"Reported compatibility differences (may be unrelated): " $ Info,
+		Root.Colors.White, Root.Fonts[F_HelpWindow]);
+}
+
+// Only explicit differences are mismatches. Missing beacon fields are unknown.
+// Used by the optional browser filter, never to block joining.
 function bool IsCompatibleServer(R6ServerList.stGameData Data)
 {
-	return Data.szGameVersion != "" &&
-		(Data.szGameVersion ~= class'Actor'.static.GetGameVersion()) &&
-		(Data.szModName ~= class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord);
+	return (Data.szGameVersion == "" ||
+		(Data.szGameVersion ~= class'Actor'.static.GetGameVersion())) &&
+		(Data.szModName == "" ||
+		(Data.szModName ~= class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord));
 }
 
 // Read the 1.60 widget filter settings; R6ServerList has no m_Filters.
@@ -378,7 +439,7 @@ function GetGSServers()
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
 		NewItem.bFavorite = ServerList[i].bFavorite;
-		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
+		NewItem.bSameVersion = true;// Compatibility is advisory; let the connection decide.
 		NewItem.szIPAddr = ServerList[i].IP;
 		if ( ServerList[i].iPing == NO_RESPONSE_PING )
 			NewItem.iPing = m_ServerListBox.m_iPingTimeOut;
@@ -415,6 +476,16 @@ function GetGSServers()
 	}
 
 	ManageToolTip("", true);
+}
+
+// The stock LAN renderer and join handler also use bSameVersion as a gate.
+function GetLanServers()
+{
+	local UWindowList Item;
+
+	super.GetLanServers();
+	for ( Item = m_ServerListBox.Items.Next; Item != None; Item = Item.Next )
+		R6WindowListServerItem(Item).bSameVersion = true;
 }
 
 // JoinSelectedServerRequested() fires when a user connects to a server in the
@@ -583,9 +654,6 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			ServerList[i].iNumPlayers = iNumP;
 			ServerList[i].szGameType = pLevel.GetGameNameLocalization(sGMode);
 			ServerList[i].szMap = sMapName;
-			ServerList[i].bWrongVersion = ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) );
-			if ( ServerList[i].bHasDetails )
-				ServerList[i].bWrongVersion = !IsCompatibleServer(ServerList[i].Details);
 			//1.7 - the query plus its start time live on the server entry, so
 			//closing the query needs no lookup in a separate bookkeeping array
 			if ( ServerList[i].bQueryPending )

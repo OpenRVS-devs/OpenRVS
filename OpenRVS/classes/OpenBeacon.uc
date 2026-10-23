@@ -101,7 +101,8 @@ private function R6MapList GetMapList()
 
 // BuildBeaconText() formats the UDP message for the server beacon protocol.
 // Copied from IpDrv/Classes/UdpBeacon.uc in the 1.56 source code.
-// We have made one change: Local beacon marker ¶O2 returns the server MOTD.
+// Local beacon marker ¶O2 returns the server MOTD. Rotation lists are sent
+// last so long rotations do not displace player data and compatibility fields.
 function string BuildBeaconText()
 {
 	local string textData;
@@ -162,8 +163,6 @@ function string BuildBeaconText()
 		// stock beacon output that clients already expect.
 		gameTypeNames = gameTypeNames $ "/" $ Level.GetGameTypeFromClassName(myList.GameType[iCounter]);
 	}
-	textData = textData @ MapListMarker $ " " $ mapNames;
-	textData = textData @ MenuGmNameMarker $ " " $ gameTypeNames;
 	textData = textData @ PlayerListMarker $ " ";
 	CheckForPlayerTimeouts();
 	iNumPlayers = 0;
@@ -265,6 +264,11 @@ function string BuildBeaconText()
 		motd = left(motd, MOTD_MAX_LEN);
 	textData = textData @ getMarker(MARKER_MOTD) @ motd;
 	// End OpenRVS modifications.
+
+	// Keep optional rotation lists last: legacy beacon text can be truncated.
+	// Existing clients identify these fields by marker, not position.
+	textData = textData @ MapListMarker $ " " $ mapNames;
+	textData = textData @ MenuGmNameMarker $ " " $ gameTypeNames;
 
 	return textData;
 }
