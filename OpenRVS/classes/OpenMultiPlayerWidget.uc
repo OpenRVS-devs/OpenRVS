@@ -23,6 +23,8 @@ struct AServer
 {
 	var string ServerName;
 	var string IP;
+	var R6ServerList.stGameData Details;
+	var bool bHasDetails;
 	var bool bFavorite;
 	var bool Locked;
 	var bool bDedicated;
@@ -42,6 +44,9 @@ var config string ServerListURL;//0.8 server list file to load
 var bool bServerSuccess;//0.8 got list of servers from online provider
 var OpenServerList OS;//moved here from local - because needed in tab switching function
 var bool bNeedsExtraRefresh;//if going from lan tab to internet, we need an extra refresh forced after the server list is fetched
+var R6ServerList DetailView;//private backing list for the stock panel renderer
+var bool bDetailsDirty;
+var string DetailAddress;
 var bool bListDirty;//1.7 - a server response arrived; rebuild the listbox on the next Paint()
 var float fLastListRebuild;//1.7 - time of the last rebuild, used to coalesce response bursts
 
@@ -105,6 +110,7 @@ function NoServerList()
 function ClearServerList()
 {
 	ServerList.remove(0,ServerList.length);
+	bDetailsDirty = true;
 	bListDirty = false;//1.7 - nothing left to rebuild
 }
 
@@ -145,7 +151,85 @@ function Paint(Canvas C, float X, float Y)
 {
 	if ( bListDirty && ( GetLevel().TimeSeconds - fLastListRebuild ) >= LIST_REBUILD_INTERVAL )
 		GetGSServers();
-	super.Paint(C,X,Y);
+	if ( m_ConnectionTab == TAB_Lan_Server )
+	{
+		DetailAddress = "";
+		bDetailsDirty = true;
+		super.Paint(C,X,Y);
+		return;
+	}
+
+	// Internet entries do not belong to m_GameService's Ubisoft list. Keep
+	// the menu managers running without its selection or alternate-info calls.
+	Root.PaintBackground(C,self);
+	m_fMouseX = X;
+	m_fMouseY = Y;
+	SetCursor(Root.NormalCursor);
+	if ( m_LoginSuccessAction != eLSAct_None )
+		m_pLoginWindow.Manager(self);
+	if ( m_bPreJoinInProgress )
+		m_pCDKeyCheckWindow.Manager(self);
+	if ( m_bJoinIPInProgress )
+		m_pJoinIPWindow.Manager(self);
+	if ( m_bQueryServerInfoInProgress )
+		m_pQueryServerInfo.Manager(self);
+
+	m_ButtonJoin.bDisabled = true;
+	if ( m_ServerListBox.m_SelectedItem != None )
+		m_ButtonJoin.bDisabled = !R6WindowListServerItem(m_ServerListBox.m_SelectedItem).bSameVersion;
+	UpdateInternetServerInfo();
+}
+
+// Copy detail snapshots by full address so sorting and late replies cannot
+// attach one server's player list to another row.
+function ReceiveServerDetails(string Address, R6ServerList.stGameData Data)
+{
+	local int i;
+
+	for ( i = 0; i < ServerList.Length; i++ )
+	{
+		if ( ServerList[i].IP == Address )
+		{
+			ServerList[i].Details = Data;
+			ServerList[i].bHasDetails = true;
+			if ( Address == DetailAddress )
+				bDetailsDirty = true;
+			return;
+		}
+	}
+}
+
+function UpdateInternetServerInfo()
+{
+	local string Address;
+	local int i;
+
+	if ( m_ServerListBox.m_SelectedItem != None )
+		Address = R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr;
+	if ( Address != DetailAddress )
+	{
+		DetailAddress = Address;
+		bDetailsDirty = true;
+	}
+	if ( !bDetailsDirty )
+		return;
+	bDetailsDirty = false;
+	ClearServerInfo();
+	if ( DetailView == None )
+		DetailView = new class'R6ServerList';
+	DetailView.m_GameServerList.Remove(0,DetailView.m_GameServerList.Length);
+	for ( i = 0; i < ServerList.Length; i++ )
+	{
+		if ( ServerList[i].IP == Address && ServerList[i].bHasDetails )
+		{
+			DetailView.m_GameServerList.Length = 1;
+			DetailView.m_GameServerList[0].sGameData = ServerList[i].Details;
+			DetailView.m_iSelSrvIndex = 0;
+			// Reuse the localized stock renderer and player-kill sorting.
+			super.GetServerInfo(DetailView);
+			return;
+		}
+	}
 }
 
 // GetGSServers() retrieves the current list of servers from the GameService.
@@ -393,6 +477,9 @@ function Refresh(bool bActivatedByUser)
 		if ( !ServerList[j].bQueryPending || now < ServerList[j].fQuerySent
 			|| ( now - ServerList[j].fQuerySent ) >= QUERY_TIMEOUT )
 		{
+			ServerList[j].bHasDetails = false;
+			if ( ServerList[j].IP == DetailAddress )
+				bDetailsDirty = true;
 			ServerList[j].iPing = NO_RESPONSE_PING;
 			ServerList[j].bQueryPending = true;
 			ServerList[j].fQuerySent = now;//1.5 - start of the rough ping measurement
