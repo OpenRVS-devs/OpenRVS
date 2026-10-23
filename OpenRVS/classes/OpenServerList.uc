@@ -97,32 +97,28 @@ function array<AServer> ParseServersINI(array<string> lines)
 	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
 	local int numFields, numSubfields;
 	local int i, j;
-	local AServer srv;
+	local AServer srv, emptyServer;
 	local array<AServer> servers;
 
-	class'OpenLogger'.static.Debug("using csv parser", self);
+	class'OpenLogger'.static.Debug("using ini parser", self);
 	lines.Remove(0, 1);//skips header line (specific to INI parser)
 
-	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
 	for (i=0; i<lines.Length; i++)
 	{
+		srv = emptyServer;
 		line = lines[i];
-		line = Mid(line, 12);//trim up to "ServerName="
-		line = Left(line, Len(line)-1);//remove )
-		lines[i] = line;//overwrite
-	}
-
-	for (i=0; i<lines.Length; i++)
-	{
-		numFields = class'OpenString'.static.Split(lines[i], ",", fields);//fields is now a list of k=v
+		if ( Left(line, 12) != "ServerList=(" || Right(line, 1) != ")" )
+			continue;
+		line = Mid(line, 12, Len(line)-13);
+		numFields = class'OpenString'.static.Split(line, ",", fields);
 		for (j=0; j<numFields; j++)
 		{
 			numSubfields = class'OpenString'.static.Split(fields[j], "=", kvpair);//kvpair is one k=v set
 			if (numSubfields != 2)
 			{
-				//occurs when someone has "=" in their server name
-				//we simply drop anything after (and including) the first "="
+				//Malformed fields must not index an incomplete key/value pair.
 				class'OpenLogger'.static.Warning("failed to parse k=v in ServerListSuccess:" @ fields[j], self);
+				continue;
 			}
 			switch (kvpair[0])//text before "="
 			{
