@@ -92,5 +92,5 @@ function ShowWindow()
 	//1.4
 	// Applies the FOV fix and custom cheat manager, shared with OpenMods. This
 	// runs in case a mod or map skips planning.
-	class'OpenFOV'.static.ApplyClassDefaults(self);
+	class'OpenConfigManager'.static.ApplyClassDefaults(self);
 }
