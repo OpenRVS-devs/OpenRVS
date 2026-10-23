@@ -76,14 +76,24 @@ function Tick(float delta)
 //find unvalidated players and flag living pawns as always relevant
 function ScanControllers()
 {
-	local Controller C;
+	local Controller C, NextController;
 	local R6PlayerController P;
 	local Pawn Pawn;
 
 	C = Level.ControllerList;
 	while ( C != none )
 	{
+		NextController = C.NextController;
 		P = R6PlayerController(C);
+		if ( P != None && HandleBans(P) )
+		{
+			class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address", self);
+			P.ClientMessage("Your IP address is banned on this server");
+			P.ClientKickedOut();
+			P.SpecialDestroy();
+			C = NextController;
+			continue;
+		}
 		//doesn't have valid cd key
 		if ( ( P != none ) && ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID ) )
 		{
@@ -100,13 +110,7 @@ function ScanControllers()
 			P.m_stPlayerVerCDKeyStatus.m_iCDKeyReqID = 1;
 			P.m_stPlayerVerCDKeyStatus.m_bCDKeyValSecondTry = false;
 			P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus = ECDKEYST_PLAYER_VALID;
-			if ( HandleBans(P) )//PLAYER IS BANNED VIA IP ADDRESS
-			{
-				class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address", self);
-				P.ClientMessage("Your IP address is banned on this server");
-				P.ClientKickedOut();
-				P.SpecialDestroy();
-			}
+
 		}
 		//1.2:
 		//set each existing pawn as always relevant
@@ -119,7 +123,7 @@ function ScanControllers()
 		{
 			Pawn.bAlwaysRelevant = true;
 		}
-		C = C.NextController;
+		C = NextController;
 	}
 }
 
@@ -131,7 +135,7 @@ function Timer()
 	Level.Game.AccessControl.LoadConfig();
 }
 
-//should be called once per controller per map
+//Check each player independently of CD-key validation on every controller scan
 //set the globalID to the IP address
 //so the IP will get banned instead of obsolete ID
 function bool HandleBans(R6PlayerController P)
@@ -139,21 +143,23 @@ function bool HandleBans(R6PlayerController P)
 	local string s;
 	local int i;
 	s = P.GetPlayerNetworkAddress();
-	P.m_szGlobalID = left(s,InStr(s,":"));
+	if ( InStr(s, ":") != -1 )
+		s = Left(s, InStr(s, ":"));
+	if ( P.m_szGlobalID != s )
+		class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is:" @ s, self);
+	P.m_szGlobalID = s;
 	//0.6 update:
 	//log each player's IP address
 	//TO DO:
 	//log the time of joining as well
-	class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is:" @ left(s,InStr(s,":")), self);
 	if (class'OpenLogger'.static.IsDebugEnabled())
 		class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
-		if ( Level.Game.AccessControl.Banned[i] ~= Left(P.m_szGlobalID,Len(Level.Game.AccessControl.Banned[i])) )
+		if ( Level.Game.AccessControl.Banned[i] != "" && Level.Game.AccessControl.Banned[i] == P.m_szGlobalID )
 			return true;
 		i++;
 	}
-	class'OpenLogger'.static.Info("PLAYER NOT BANNED", self);
 	return false;
 }
 
