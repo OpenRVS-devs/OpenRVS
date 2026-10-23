@@ -143,8 +143,8 @@ event Closed()
 	resp = parseHttpResponse(kiloBuffer);
 	if (resp.Code == -1)//this is not an HTTP response
 	{
-		class'OpenLogger'.static.Debug("response was not HTTP, ignoring", self);
-		finishRequest();//one client per request, so clean up either way
+		class'OpenLogger'.static.Debug("response was not HTTP, reporting failure", self);
+		triggerCallbacks();//report the empty response so callers can fall back
 		return;
 	}
 	if (class'OpenLogger'.static.IsDebugEnabled())
