@@ -17,6 +17,7 @@ const LIST_REBUILD_INTERVAL = 0.25;
 // in-flight forever and never be queried again. After this many seconds the
 // pending query is treated as lost and the server becomes eligible again.
 const QUERY_TIMEOUT = 10.0;
+const NO_RESPONSE_PING = -1;
 
 struct AServer
 {
@@ -99,7 +100,7 @@ function AddServerToList(string sn, string sip, string sm)
 	Temp.ServerName = sn;
 	Temp.IP = sip;
 	Temp.GameMode = sm;
-	Temp.iPing = 1000;//1.5 - don't let iPing initialize with null value of 0 - for sorting. If server responds, this value will be set to actual ping
+	Temp.iPing = NO_RESPONSE_PING;
 	Temp.bAdversarial = ( InStr(caps(sm),"ADV") != -1 );//1.7 - cache the classification; GameMode never changes after this
 	ServerList[ServerList.length] = Temp;
 }
@@ -203,7 +204,10 @@ function GetGSServers()
 		NewItem.bFavorite = true;//todo - favorite servers
 		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
 		NewItem.szIPAddr = ServerList[i].IP;
-		NewItem.iPing = ServerList[i].iPing;
+		if ( ServerList[i].iPing == NO_RESPONSE_PING )
+			NewItem.iPing = m_ServerListBox.m_iPingTimeOut;
+		else
+			NewItem.iPing = ServerList[i].iPing;
 		NewItem.szName = ServerList[i].ServerName;
 		NewItem.szMap = ServerList[i].szMap;//"";//1.5 change
 		NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
@@ -356,12 +360,12 @@ function Refresh(bool bActivatedByUser)
 	j = 0;
 	while ( j < ServerList.length )
 	{
-		ServerList[j].iPing = 1000;//set to 1000 so if server doesn't respond this time, it will sort to the bottom of the list
 		//1.5 - only one open query to a server at a time. now < fQuerySent
 		//means the level clock restarted, so the pending query is stale too.
 		if ( !ServerList[j].bQueryPending || now < ServerList[j].fQuerySent
 			|| ( now - ServerList[j].fQuerySent ) >= QUERY_TIMEOUT )
 		{
+			ServerList[j].iPing = NO_RESPONSE_PING;
 			ServerList[j].bQueryPending = true;
 			ServerList[j].fQuerySent = now;//1.5 - start of the rough ping measurement
 			OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,
@@ -510,7 +514,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 				else
 					bSwap =  sCompare1 < sCompare2;
 			}
-			bSwap = ( ( bSwap || ( ServerList[j].iPing == 1000 ) ) && ( ServerList[j+1].iPing != 1000 ) );//always send servers with no response to the bottom of the list
+			bSwap = ( ( bSwap || ( ServerList[j].iPing == NO_RESPONSE_PING ) ) && ( ServerList[j+1].iPing != NO_RESPONSE_PING ) );//always send servers with no response to the bottom of the list
 			if ( bSwap )
 			{
 				temp = ServerList[j];
