@@ -62,8 +62,8 @@ release:
 	tag=$$(git -C "$(REPO_ROOT)" tag --sort=-version:refname | head -n 1); \
 	test -n "$$tag" || { echo 'No Git tags found' >&2; exit 1; }; \
 	archive="$(REPO_ROOT)/OpenRVS-$$tag.zip"; \
-	for file in "$(BUILD_DIR)/OpenRenderFix.utx" "$(REPO_ROOT)/openrvs.ini" "$(BUILD_DIR)/OpenRVS.u" "$(REPO_ROOT)/R6ClassDefines.ini" "$(REPO_ROOT)/Servers.list"; do \
+	for file in "$(BUILD_DIR)/OpenRenderFix.u" "$(REPO_ROOT)/openrvs.ini" "$(BUILD_DIR)/OpenRVS.u" "$(REPO_ROOT)/R6ClassDefines.ini" "$(REPO_ROOT)/Servers.list"; do \
 		test -f "$$file" || { echo "Missing release file: $$file" >&2; exit 1; }; \
 	done; \
-	python3 -c 'import pathlib, sys, zipfile; archive = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); [archive.write(path, pathlib.Path(path).name) for path in sys.argv[2:]]; archive.close()' "$$archive" "$(BUILD_DIR)/OpenRenderFix.utx" "$(REPO_ROOT)/openrvs.ini" "$(BUILD_DIR)/OpenRVS.u" "$(REPO_ROOT)/R6ClassDefines.ini" "$(REPO_ROOT)/Servers.list"; \
+	python3 -c 'import pathlib, sys, zipfile; archive = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); [archive.write(path, pathlib.Path(path).name) for path in sys.argv[2:]]; archive.close()' "$$archive" "$(BUILD_DIR)/OpenRenderFix.u" "$(REPO_ROOT)/openrvs.ini" "$(BUILD_DIR)/OpenRVS.u" "$(REPO_ROOT)/R6ClassDefines.ini" "$(REPO_ROOT)/Servers.list"; \
 	echo "Created $$archive"

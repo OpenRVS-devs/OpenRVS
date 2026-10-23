@@ -18,6 +18,9 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 1. Stop your game if it's running.
 2. Extract the contents of the OpenRVS ZIP file to your game's `system`
    directory. For Steam, this is `steamapps\common\Rainbow Six 3 Gold\system`.
+   When upgrading an older installation, remove old `OpenRenderFix.utx` copies
+   from the game's package directories. The release now installs the code package
+   as `system/OpenRenderFix.u`, which matches the game's `System/*.u` search path.
 3. Optionally adjust your FOV in `openrvs.ini` - see the `[OpenRVS.OpenFOV]`
    section.
 4. Launch the game! You'll see a list of servers to choose from, or you can join

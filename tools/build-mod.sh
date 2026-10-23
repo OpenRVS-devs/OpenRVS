@@ -86,7 +86,6 @@ Environment:
 Outputs:
   build/OpenRVS.u
   build/OpenRenderFix.u
-  build/OpenRenderFix.utx   (same package, for installs that use .utx)
 EOF
 }
 
@@ -446,12 +445,6 @@ copy_artifacts() {
 		cp -f -- "$SYS/$p.u" "$BUILD_DIR/$p.u"
 		artifacts+=("$BUILD_DIR/$p.u")
 
-		# Raven Shield installs OpenRenderFix as a .utx package. Emit both
-		# extensions so the artifact works with either instruction set.
-		if [[ "$p" == "OpenRenderFix" ]]; then
-			cp -f -- "$SYS/$p.u" "$BUILD_DIR/$p.utx"
-			artifacts+=("$BUILD_DIR/$p.utx")
-		fi
 	done
 
 	log "artifacts:"
