@@ -192,6 +192,10 @@ function ReceiveServerDetails(string Address, R6ServerList.stGameData Data)
 		{
 			ServerList[i].Details = Data;
 			ServerList[i].bHasDetails = true;
+			ServerList[i].bAdversarial = Data.bAdversarial;
+			ServerList[i].bWrongVersion = !IsCompatibleServer(Data);
+			if ( m_ConnectionTab == TAB_Internet_Server )
+				bListDirty = true;
 			if ( Address == DetailAddress )
 				bDetailsDirty = true;
 			return;
@@ -230,6 +234,93 @@ function UpdateInternetServerInfo()
 			return;
 		}
 	}
+}
+
+// Version and mod must both match; an omitted version is unknown rather
+// than proof of compatibility. Use raw protocol values, never localized text.
+function bool IsCompatibleServer(R6ServerList.stGameData Data)
+{
+	return Data.szGameVersion != "" &&
+		(Data.szGameVersion ~= class'Actor'.static.GetGameVersion()) &&
+		(Data.szModName ~= class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord);
+}
+
+// Filter only the visible rows. Retain every registry entry so hidden servers
+// are still queried and can reappear when their response or settings change.
+function bool MatchesFilters(int ServerIndex)
+{
+	local R6ServerList.stFilterSettings Filters;
+	local string GameType;
+	local int i;
+	local bool bFoundPlayer;
+
+	Filters = m_GameService.m_Filters;
+	if ( Filters.bFavoritesOnly && !ServerList[ServerIndex].bFavorite )
+		return false;
+	if ( Filters.bResponding && ServerList[ServerIndex].iPing == NO_RESPONSE_PING )
+		return false;
+	if ( Filters.iFasterThan > 0 && (ServerList[ServerIndex].iPing == NO_RESPONSE_PING ||
+		ServerList[ServerIndex].iPing > Filters.iFasterThan) )
+		return false;
+
+	// Do not treat unanswered entries as unlocked, empty, or compatible.
+	// With no detail-dependent restrictions, keep them visible for joining by IP.
+	if ( !ServerList[ServerIndex].bHasDetails )
+		return !(Filters.bUnlockedOnly || Filters.bDedicatedServersOnly ||
+			Filters.bServersNotEmpty || Filters.bServersNotFull ||
+			Filters.bPunkBusterServerOnly || Filters.bSameVersion || Filters.szHasPlayer != "");
+
+	if ( Filters.bUnlockedOnly && ServerList[ServerIndex].Details.bUsePassword )
+		return false;
+	if ( Filters.bDedicatedServersOnly && !ServerList[ServerIndex].Details.bDedicatedServer )
+		return false;
+	if ( Filters.bServersNotEmpty && ServerList[ServerIndex].Details.iNbrPlayer <= 0 )
+		return false;
+	if ( Filters.bServersNotFull && (ServerList[ServerIndex].Details.iMaxPlayer <= 0 ||
+		ServerList[ServerIndex].Details.iNbrPlayer >= ServerList[ServerIndex].Details.iMaxPlayer) )
+		return false;
+	if ( Filters.bPunkBusterServerOnly && !ServerList[ServerIndex].Details.bPunkBuster )
+		return false;
+	if ( Filters.bSameVersion && !IsCompatibleServer(ServerList[ServerIndex].Details) )
+		return false;
+	if ( Filters.szHasPlayer != "" )
+	{
+		for ( i = 0; i < ServerList[ServerIndex].Details.playerList.Length; i++ )
+		{
+			if ( InStr(Caps(ServerList[ServerIndex].Details.playerList[i].szAlias),Caps(Filters.szHasPlayer)) != -1 )
+			{
+				bFoundPlayer = true;
+				break;
+			}
+		}
+		if ( !bFoundPlayer )
+			return false;
+	}
+
+	GameType = Caps(ServerList[ServerIndex].Details.szGameDataGameType);
+	switch ( GameType )
+	{
+		case "RGM_DEATHMATCHMODE": return Filters.bDeathMatch;
+		case "RGM_TEAMDEATHMATCHMODE": return Filters.bTeamDeathMatch;
+		case "RGM_BOMBADVMODE": return Filters.bDisarmBomb;
+		case "RGM_HOSTAGERESCUEADVMODE": return Filters.bHostageRescueAdv;
+		case "RGM_ESCORTADVMODE": return Filters.bEscortPilot;
+		case "RGM_MISSIONMODE": return Filters.bMission;
+		case "RGM_TERRORISTHUNTCOOPMODE": return Filters.bTerroristHunt;
+		case "RGM_TERRORISTHUNTADVMODE": return Filters.bTerroristHuntAdv;
+		case "RGM_SCATTEREDHUNTADVMODE": return Filters.bScatteredHuntAdv;
+		case "RGM_CAPTURETHEENEMYADVMODE": return Filters.bCaptureTheEnemyAdv;
+		case "RGM_KAMIKAZEMODE": return Filters.bKamikaze;
+		case "RGM_HOSTAGERESCUECOOPMODE": return Filters.bHostageRescueCoop;
+		case "RGM_DEFENDCOOPMODE": return Filters.bDefend;
+		case "RGM_RECONCOOPMODE": return Filters.bRecon;
+		case "RGM_SQUADDEATHMATCH": return Filters.bSquadDeathMatch;
+		case "RGM_SQUADTEAMDEATHMATCH": return Filters.bSquadTeamDeathMatch;
+		case "RGM_NORULESMODE": return Filters.bDebugGameMode;
+	}
+	// Unknown/custom types have no matching checkbox. Keep them visible;
+	// apply all technical filters above without inventing a game-type mapping.
+	return true;
 }
 
 // GetGSServers() retrieves the current list of servers from the GameService.
@@ -304,7 +395,7 @@ function GetGSServers()
 	while ( i < ServerList.length )
 	{
 		ServerList[i].bFavorite = m_GameService.IsAFavorite(ServerList[i].IP);
-		if ( m_GameService.m_Filters.bFavoritesOnly && !ServerList[i].bFavorite )
+		if ( !MatchesFilters(i) )
 		{
 			i++;
 			continue;
@@ -326,7 +417,7 @@ function GetGSServers()
 		NewItem.iNumPlayers = ServerList[i].iNumPlayers;
 		NewItem.bLocked = ServerList[i].Locked;
 		NewItem.bDedicated = ServerList[i].bDedicated;
-		NewItem.bPunkBuster = false;
+		NewItem.bPunkBuster = ServerList[i].bHasDetails && ServerList[i].Details.bPunkBuster;
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
 		NewItem.szGameType = ServerList[i].szGameType;//"";//1.5 change
 		if ( ServerList[i].bAdversarial )
@@ -489,6 +580,9 @@ function Refresh(bool bActivatedByUser)
 		}
 		j++;
 	}
+	// Reapply response-dependent filters immediately after invalidating snapshots.
+	if ( m_ConnectionTab == TAB_Internet_Server )
+		bListDirty = true;
 }
 
 //0.8 written
@@ -517,6 +611,8 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			ServerList[i].szGameType = pLevel.GetGameNameLocalization(sGMode);
 			ServerList[i].szMap = sMapName;
 			ServerList[i].bWrongVersion = ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) );
+			if ( ServerList[i].bHasDetails )
+				ServerList[i].bWrongVersion = !IsCompatibleServer(ServerList[i].Details);
 			//1.7 - the query plus its start time live on the server entry, so
 			//closing the query needs no lookup in a separate bookkeeping array
 			if ( ServerList[i].bQueryPending )
