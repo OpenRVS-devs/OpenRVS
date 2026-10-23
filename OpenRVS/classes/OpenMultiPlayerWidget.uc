@@ -24,6 +24,7 @@ struct AServer
 	var string ServerName;
 	var string IP;
 	var bool Locked;
+	var bool bDedicated;
 	var string GameMode;
 	var int iMaxPlayers,iNumPlayers;//1.5 - max players/current players
 	var string szGameType;//1.5 - localized game mode name
@@ -226,7 +227,7 @@ function GetGSServers()
 		NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
 		NewItem.iNumPlayers = ServerList[i].iNumPlayers;
 		NewItem.bLocked = ServerList[i].Locked;
-		NewItem.bDedicated = true;//todo: grab dedicated info from client beacon receiver
+		NewItem.bDedicated = ServerList[i].bDedicated;
 		NewItem.bPunkBuster = false;
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
 		NewItem.szGameType = ServerList[i].szGameType;//"";//1.5 change
@@ -392,7 +393,7 @@ function Refresh(bool bActivatedByUser)
 //0.8 written
 //1.3 added mod keyword locking
 //1.5 receive locked info from specific servers, not master list
-function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked)
+function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked,bool bDedicated)
 {
 	local R6WindowListServerItem CurServer;
 	local int i,iTime;
@@ -409,6 +410,7 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 		{
 			ServerList[i].ServerName = sSvrName;
 			ServerList[i].Locked = bSvrLocked;
+			ServerList[i].bDedicated = bDedicated;
 			ServerList[i].iMaxPlayers = iMaxP;
 			ServerList[i].iNumPlayers = iNumP;
 			ServerList[i].szGameType = pLevel.GetGameNameLocalization(sGMode);
@@ -486,6 +488,11 @@ function ResortServerList(int iCategory, bool _bAscending)
 					sCompare1 = string(ServerList[j].Locked);
 					sCompare2 = string(ServerList[j+1].Locked);
 					break;
+				case 2://dedicated
+					bIntComp = true;
+					iCompare1 = int(ServerList[j].bDedicated);
+					iCompare2 = int(ServerList[j+1].bDedicated);
+					break;
 				case 5://name
 					sCompare1 = ServerList[j].ServerName;
 					sCompare2 = ServerList[j+1].ServerName;
@@ -507,7 +514,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 					iCompare1 = ServerList[j].iNumPlayers;
 					iCompare2 = ServerList[j+1].iNumPlayers;
 					break;
-				default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server, favorites
+				default://ping sort; unsupported favorites and PunkBuster categories also sort by ping
 					bIntComp = true;
 					iCompare1 = ServerList[j].iPing;
 					iCompare2 = ServerList[j+1].iPing;

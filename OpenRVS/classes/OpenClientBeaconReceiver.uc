@@ -26,6 +26,7 @@ event ReceivedText(IpAddr Addr, string Text)
 	local string sNumP,sMaxP,sGMode,sMapName,sSvrName;
 	local string sModName;//1.3
 	local bool bSvrLocked;//1.5
+	local bool bDedicated;
 
 	super.ReceivedText(Addr,Text);
 
@@ -53,8 +54,10 @@ event ReceivedText(IpAddr Addr, string Text)
 			sSvrName = ParseOption(szThirdWord,SvrNameMarker);
 			sModName = ParseOption(szThirdWord,ModNameMarker);//1.3 - sModName string added to function in MP menu
 			bSvrLocked = bool(ParseOption(szThirdWord,LockedMarker));//1.5 - locked info received here
+			// DecicatedMarker is the stock protocol name (including its spelling).
+			bDedicated = bool(int(ParseOption(szThirdWord,DecicatedMarker)));
 			if ( Widget != None )
-				Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked);//send received info back to server list
+				Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked,bDedicated);//send received info back to server list
 			if (class'OpenLogger'.static.IsDebugEnabled())
 				class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
 		}
