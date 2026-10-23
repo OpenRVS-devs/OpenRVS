@@ -167,8 +167,7 @@ function Paint(Canvas C, float X, float Y)
 	SetCursor(Root.NormalCursor);
 	if ( m_LoginSuccessAction != eLSAct_None )
 		m_pLoginWindow.Manager(self);
-	if ( m_bPreJoinInProgress )
-		m_pCDKeyCheckWindow.Manager(self);
+	// CD-key processing is owned by the root's R6MenuCDKeyManager in 1.60.
 	if ( m_bJoinIPInProgress )
 		m_pJoinIPWindow.Manager(self);
 	if ( m_bQueryServerInfoInProgress )
@@ -245,78 +244,52 @@ function bool IsCompatibleServer(R6ServerList.stGameData Data)
 		(Data.szModName ~= class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord);
 }
 
+// Read the 1.60 widget filter settings; R6ServerList has no m_Filters.
 // Filter only the visible rows. Retain every registry entry so hidden servers
 // are still queried and can reappear when their response or settings change.
 function bool MatchesFilters(int ServerIndex)
 {
-	local R6ServerList.stFilterSettings Filters;
 	local string GameType;
-	local int i;
-	local bool bFoundPlayer;
 
-	Filters = m_GameService.m_Filters;
-	if ( Filters.bFavoritesOnly && !ServerList[ServerIndex].bFavorite )
+	if ( m_bFilterFavoritesOnly && !ServerList[ServerIndex].bFavorite )
 		return false;
-	if ( Filters.bResponding && ServerList[ServerIndex].iPing == NO_RESPONSE_PING )
+	if ( m_bFilterResponding && ServerList[ServerIndex].iPing == NO_RESPONSE_PING )
 		return false;
-	if ( Filters.iFasterThan > 0 && (ServerList[ServerIndex].iPing == NO_RESPONSE_PING ||
-		ServerList[ServerIndex].iPing > Filters.iFasterThan) )
+	if ( m_iFilterFasterThan > 0 && (ServerList[ServerIndex].iPing == NO_RESPONSE_PING ||
+		ServerList[ServerIndex].iPing > m_iFilterFasterThan) )
 		return false;
 
 	// Do not treat unanswered entries as unlocked, empty, or compatible.
 	// With no detail-dependent restrictions, keep them visible for joining by IP.
 	if ( !ServerList[ServerIndex].bHasDetails )
-		return !(Filters.bUnlockedOnly || Filters.bDedicatedServersOnly ||
-			Filters.bServersNotEmpty || Filters.bServersNotFull ||
-			Filters.bPunkBusterServerOnly || Filters.bSameVersion || Filters.szHasPlayer != "");
+		return !(m_bFilterUnlockedOnly || m_bFilterDedicatedServersOnly ||
+			m_bFilterServersNotEmpty || m_bFilterServersNotFull ||
+			m_bFilterPunkBusterServerOnly || m_bFilterSameVersion);
 
-	if ( Filters.bUnlockedOnly && ServerList[ServerIndex].Details.bUsePassword )
+	if ( m_bFilterUnlockedOnly && ServerList[ServerIndex].Details.bUsePassword )
 		return false;
-	if ( Filters.bDedicatedServersOnly && !ServerList[ServerIndex].Details.bDedicatedServer )
+	if ( m_bFilterDedicatedServersOnly && !ServerList[ServerIndex].Details.bDedicatedServer )
 		return false;
-	if ( Filters.bServersNotEmpty && ServerList[ServerIndex].Details.iNbrPlayer <= 0 )
+	if ( m_bFilterServersNotEmpty && ServerList[ServerIndex].Details.iNbrPlayer <= 0 )
 		return false;
-	if ( Filters.bServersNotFull && (ServerList[ServerIndex].Details.iMaxPlayer <= 0 ||
+	if ( m_bFilterServersNotFull && (ServerList[ServerIndex].Details.iMaxPlayer <= 0 ||
 		ServerList[ServerIndex].Details.iNbrPlayer >= ServerList[ServerIndex].Details.iMaxPlayer) )
 		return false;
-	if ( Filters.bPunkBusterServerOnly && !ServerList[ServerIndex].Details.bPunkBuster )
+	if ( m_bFilterPunkBusterServerOnly && !ServerList[ServerIndex].Details.bPunkBuster )
 		return false;
-	if ( Filters.bSameVersion && !IsCompatibleServer(ServerList[ServerIndex].Details) )
+	if ( m_bFilterSameVersion && !IsCompatibleServer(ServerList[ServerIndex].Details) )
 		return false;
-	if ( Filters.szHasPlayer != "" )
-	{
-		for ( i = 0; i < ServerList[ServerIndex].Details.playerList.Length; i++ )
-		{
-			if ( InStr(Caps(ServerList[ServerIndex].Details.playerList[i].szAlias),Caps(Filters.szHasPlayer)) != -1 )
-			{
-				bFoundPlayer = true;
-				break;
-			}
-		}
-		if ( !bFoundPlayer )
-			return false;
-	}
-
 	GameType = Caps(ServerList[ServerIndex].Details.szGameDataGameType);
 	switch ( GameType )
 	{
-		case "RGM_DEATHMATCHMODE": return Filters.bDeathMatch;
-		case "RGM_TEAMDEATHMATCHMODE": return Filters.bTeamDeathMatch;
-		case "RGM_BOMBADVMODE": return Filters.bDisarmBomb;
-		case "RGM_HOSTAGERESCUEADVMODE": return Filters.bHostageRescueAdv;
-		case "RGM_ESCORTADVMODE": return Filters.bEscortPilot;
-		case "RGM_MISSIONMODE": return Filters.bMission;
-		case "RGM_TERRORISTHUNTCOOPMODE": return Filters.bTerroristHunt;
-		case "RGM_TERRORISTHUNTADVMODE": return Filters.bTerroristHuntAdv;
-		case "RGM_SCATTEREDHUNTADVMODE": return Filters.bScatteredHuntAdv;
-		case "RGM_CAPTURETHEENEMYADVMODE": return Filters.bCaptureTheEnemyAdv;
-		case "RGM_KAMIKAZEMODE": return Filters.bKamikaze;
-		case "RGM_HOSTAGERESCUECOOPMODE": return Filters.bHostageRescueCoop;
-		case "RGM_DEFENDCOOPMODE": return Filters.bDefend;
-		case "RGM_RECONCOOPMODE": return Filters.bRecon;
-		case "RGM_SQUADDEATHMATCH": return Filters.bSquadDeathMatch;
-		case "RGM_SQUADTEAMDEATHMATCH": return Filters.bSquadTeamDeathMatch;
-		case "RGM_NORULESMODE": return Filters.bDebugGameMode;
+		case "RGM_DEATHMATCHMODE": return m_bFilterDeathMatch;
+		case "RGM_TEAMDEATHMATCHMODE": return m_bFilterTeamDeathMatch;
+		case "RGM_BOMBADVMODE": return m_bFilterDisarmBomb;
+		case "RGM_HOSTAGERESCUEADVMODE": return m_bFilterHostageRescueAdv;
+		case "RGM_ESCORTADVMODE": return m_bFilterEscortPilot;
+		case "RGM_MISSIONMODE": return m_bFilterMission;
+		case "RGM_TERRORISTHUNTCOOPMODE": return m_bFilterTerroristHunt;
+		case "RGM_HOSTAGERESCUECOOPMODE": return m_bFilterHostageRescueCoop;
 	}
 	// Unknown/custom types have no matching checkbox. Keep them visible;
 	// apply all technical filters above without inventing a game-type mapping.
