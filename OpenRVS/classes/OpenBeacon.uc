@@ -4,7 +4,7 @@
 //IMPORTANT: Servers with N4 Admin should not install this class
 //debug - should log any time an initial connection with client opens
 //installed server side
-class OpenBeacon extends UdpBeacon transient;
+class OpenBeacon extends UdpBeacon config(openrvs) transient;
 
 // RegistryServer refers to a server running github.com/willroberts/openrvs-registry.
 // This can be updated here, or disabled by commenting the RegisterServer() call
