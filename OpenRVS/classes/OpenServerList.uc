@@ -61,7 +61,7 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 	httpc = none;//done with HTTP client; it destroys itself once this callback returns
 
 	//Check for errors.
-	if (resp.Code != 200)
+	if (resp.Code != 200 || resp.Lines.Length == 0)
 	{
 		class'OpenLogger'.static.Error("failed to retrieve servers over http", self);
 		SendServersUpstream(GetFallbackServers());
