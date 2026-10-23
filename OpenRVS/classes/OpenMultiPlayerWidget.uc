@@ -23,7 +23,11 @@ struct AServer
 {
 	var string ServerName;
 	var string IP;
+	var R6ServerList.stGameData Details;
+	var bool bHasDetails;
+	var bool bFavorite;
 	var bool Locked;
+	var bool bDedicated;
 	var string GameMode;
 	var int iMaxPlayers,iNumPlayers;//1.5 - max players/current players
 	var string szGameType;//1.5 - localized game mode name
@@ -40,6 +44,9 @@ var config string ServerListURL;//0.8 server list file to load
 var bool bServerSuccess;//0.8 got list of servers from online provider
 var OpenServerList OS;//moved here from local - because needed in tab switching function
 var bool bNeedsExtraRefresh;//if going from lan tab to internet, we need an extra refresh forced after the server list is fetched
+var R6ServerList DetailView;//private backing list for the stock panel renderer
+var bool bDetailsDirty;
+var string DetailAddress;
 var bool bListDirty;//1.7 - a server response arrived; rebuild the listbox on the next Paint()
 var float fLastListRebuild;//1.7 - time of the last rebuild, used to coalesce response bursts
 
@@ -50,6 +57,10 @@ var float fLastListRebuild;//1.7 - time of the last rebuild, used to coalesce re
 // Overrides the matching function in R6MenuMultiPlayerWidget.
 function QueryReceivedStartPreJoin ()
 {
+	// A saved activation ID skips UP_ENTER_CD_KEY, which OpenCDKeyCheck
+	// intercepts to bypass the retired Ubisoft validation service. Always
+	// take that path, including after a previous LAN connection (issue #62).
+	m_GameService.m_bValidActivationID = false;
 	R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_NO,
 		m_GameService.m_ClientBeacon.PreJoinInfo);
 }
@@ -66,6 +77,7 @@ function Created()
 	local OpenServerList existingList;
 
 	super.Created();
+	m_GameService.NativeInitFavorites();//load the existing address-based favorites file
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
 	// Reuse the level's provider across menu rebuilds. Init cancels its old
@@ -98,6 +110,7 @@ function NoServerList()
 function ClearServerList()
 {
 	ServerList.remove(0,ServerList.length);
+	bDetailsDirty = true;
 	bListDirty = false;//1.7 - nothing left to rebuild
 }
 
@@ -123,7 +136,7 @@ function AddServerToList(string sn, string sip, string sm)
 function FinishedServers()
 {
 	bServerSuccess = true;
-	GetGSServers();
+	ResortServerList(m_iLastSortCategory,m_bLastTypeOfSort);
 	if ( bNeedsExtraRefresh )
 	{
 		bNeedsExtraRefresh = false;
@@ -138,7 +151,149 @@ function Paint(Canvas C, float X, float Y)
 {
 	if ( bListDirty && ( GetLevel().TimeSeconds - fLastListRebuild ) >= LIST_REBUILD_INTERVAL )
 		GetGSServers();
-	super.Paint(C,X,Y);
+	if ( m_ConnectionTab == TAB_Lan_Server )
+	{
+		DetailAddress = "";
+		bDetailsDirty = true;
+		super.Paint(C,X,Y);
+		return;
+	}
+
+	// Internet entries do not belong to m_GameService's Ubisoft list. Keep
+	// the menu managers running without its selection or alternate-info calls.
+	Root.PaintBackground(C,self);
+	m_fMouseX = X;
+	m_fMouseY = Y;
+	SetCursor(Root.NormalCursor);
+	if ( m_LoginSuccessAction != eLSAct_None )
+		m_pLoginWindow.Manager(self);
+	// CD-key processing is owned by the root's R6MenuCDKeyManager in 1.60.
+	if ( m_bJoinIPInProgress )
+		m_pJoinIPWindow.Manager(self);
+	if ( m_bQueryServerInfoInProgress )
+		m_pQueryServerInfo.Manager(self);
+
+	m_ButtonJoin.bDisabled = true;
+	if ( m_ServerListBox.m_SelectedItem != None )
+		m_ButtonJoin.bDisabled = !R6WindowListServerItem(m_ServerListBox.m_SelectedItem).bSameVersion;
+	UpdateInternetServerInfo();
+}
+
+// Copy detail snapshots by full address so sorting and late replies cannot
+// attach one server's player list to another row.
+function ReceiveServerDetails(string Address, R6ServerList.stGameData Data)
+{
+	local int i;
+
+	for ( i = 0; i < ServerList.Length; i++ )
+	{
+		if ( ServerList[i].IP == Address )
+		{
+			ServerList[i].Details = Data;
+			ServerList[i].bHasDetails = true;
+			ServerList[i].bAdversarial = Data.bAdversarial;
+			ServerList[i].bWrongVersion = !IsCompatibleServer(Data);
+			if ( m_ConnectionTab == TAB_Internet_Server )
+				bListDirty = true;
+			if ( Address == DetailAddress )
+				bDetailsDirty = true;
+			return;
+		}
+	}
+}
+
+function UpdateInternetServerInfo()
+{
+	local string Address;
+	local int i;
+
+	if ( m_ServerListBox.m_SelectedItem != None )
+		Address = R6WindowListServerItem(m_ServerListBox.m_SelectedItem).szIPAddr;
+	if ( Address != DetailAddress )
+	{
+		DetailAddress = Address;
+		bDetailsDirty = true;
+	}
+	if ( !bDetailsDirty )
+		return;
+	bDetailsDirty = false;
+	ClearServerInfo();
+	if ( DetailView == None )
+		DetailView = new class'R6ServerList';
+	DetailView.m_GameServerList.Remove(0,DetailView.m_GameServerList.Length);
+	for ( i = 0; i < ServerList.Length; i++ )
+	{
+		if ( ServerList[i].IP == Address && ServerList[i].bHasDetails )
+		{
+			DetailView.m_GameServerList.Length = 1;
+			DetailView.m_GameServerList[0].sGameData = ServerList[i].Details;
+			DetailView.m_iSelSrvIndex = 0;
+			// Reuse the localized stock renderer and player-kill sorting.
+			super.GetServerInfo(DetailView);
+			return;
+		}
+	}
+}
+
+// Version and mod must both match; an omitted version is unknown rather
+// than proof of compatibility. Use raw protocol values, never localized text.
+function bool IsCompatibleServer(R6ServerList.stGameData Data)
+{
+	return Data.szGameVersion != "" &&
+		(Data.szGameVersion ~= class'Actor'.static.GetGameVersion()) &&
+		(Data.szModName ~= class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord);
+}
+
+// Read the 1.60 widget filter settings; R6ServerList has no m_Filters.
+// Filter only the visible rows. Retain every registry entry so hidden servers
+// are still queried and can reappear when their response or settings change.
+function bool MatchesFilters(int ServerIndex)
+{
+	local string GameType;
+
+	if ( m_bFilterFavoritesOnly && !ServerList[ServerIndex].bFavorite )
+		return false;
+	if ( m_bFilterResponding && ServerList[ServerIndex].iPing == NO_RESPONSE_PING )
+		return false;
+	if ( m_iFilterFasterThan > 0 && (ServerList[ServerIndex].iPing == NO_RESPONSE_PING ||
+		ServerList[ServerIndex].iPing > m_iFilterFasterThan) )
+		return false;
+
+	// Do not treat unanswered entries as unlocked, empty, or compatible.
+	// With no detail-dependent restrictions, keep them visible for joining by IP.
+	if ( !ServerList[ServerIndex].bHasDetails )
+		return !(m_bFilterUnlockedOnly || m_bFilterDedicatedServersOnly ||
+			m_bFilterServersNotEmpty || m_bFilterServersNotFull ||
+			m_bFilterPunkBusterServerOnly || m_bFilterSameVersion);
+
+	if ( m_bFilterUnlockedOnly && ServerList[ServerIndex].Details.bUsePassword )
+		return false;
+	if ( m_bFilterDedicatedServersOnly && !ServerList[ServerIndex].Details.bDedicatedServer )
+		return false;
+	if ( m_bFilterServersNotEmpty && ServerList[ServerIndex].Details.iNbrPlayer <= 0 )
+		return false;
+	if ( m_bFilterServersNotFull && (ServerList[ServerIndex].Details.iMaxPlayer <= 0 ||
+		ServerList[ServerIndex].Details.iNbrPlayer >= ServerList[ServerIndex].Details.iMaxPlayer) )
+		return false;
+	if ( m_bFilterPunkBusterServerOnly && !ServerList[ServerIndex].Details.bPunkBuster )
+		return false;
+	if ( m_bFilterSameVersion && !IsCompatibleServer(ServerList[ServerIndex].Details) )
+		return false;
+	GameType = Caps(ServerList[ServerIndex].Details.szGameDataGameType);
+	switch ( GameType )
+	{
+		case "RGM_DEATHMATCHMODE": return m_bFilterDeathMatch;
+		case "RGM_TEAMDEATHMATCHMODE": return m_bFilterTeamDeathMatch;
+		case "RGM_BOMBADVMODE": return m_bFilterDisarmBomb;
+		case "RGM_HOSTAGERESCUEADVMODE": return m_bFilterHostageRescueAdv;
+		case "RGM_ESCORTADVMODE": return m_bFilterEscortPilot;
+		case "RGM_MISSIONMODE": return m_bFilterMission;
+		case "RGM_TERRORISTHUNTCOOPMODE": return m_bFilterTerroristHunt;
+		case "RGM_HOSTAGERESCUECOOPMODE": return m_bFilterHostageRescueCoop;
+	}
+	// Unknown/custom types have no matching checkbox. Keep them visible;
+	// apply all technical filters above without inventing a game-type mapping.
+	return true;
 }
 
 // GetGSServers() retrieves the current list of servers from the GameService.
@@ -209,12 +364,20 @@ function GetGSServers()
 	szModeCoop = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
 
 	i = 0;
+	j = 0;//visible row index differs from ServerList when filtering
 	while ( i < ServerList.length )
 	{
-		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(i,NewItem));
+		ServerList[i].bFavorite = m_GameService.IsAFavorite(ServerList[i].IP);
+		if ( !MatchesFilters(i) )
+		{
+			i++;
+			continue;
+		}
+		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(j,NewItem));
+		j++;
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
-		NewItem.bFavorite = true;//todo - favorite servers
+		NewItem.bFavorite = ServerList[i].bFavorite;
 		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
 		NewItem.szIPAddr = ServerList[i].IP;
 		if ( ServerList[i].iPing == NO_RESPONSE_PING )
@@ -226,8 +389,8 @@ function GetGSServers()
 		NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
 		NewItem.iNumPlayers = ServerList[i].iNumPlayers;
 		NewItem.bLocked = ServerList[i].Locked;
-		NewItem.bDedicated = true;//todo: grab dedicated info from client beacon receiver
-		NewItem.bPunkBuster = false;
+		NewItem.bDedicated = ServerList[i].bDedicated;
+		NewItem.bPunkBuster = ServerList[i].bHasDetails && ServerList[i].Details.bPunkBuster;
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
 		NewItem.szGameType = ServerList[i].szGameType;//"";//1.5 change
 		if ( ServerList[i].bAdversarial )
@@ -378,6 +541,9 @@ function Refresh(bool bActivatedByUser)
 		if ( !ServerList[j].bQueryPending || now < ServerList[j].fQuerySent
 			|| ( now - ServerList[j].fQuerySent ) >= QUERY_TIMEOUT )
 		{
+			ServerList[j].bHasDetails = false;
+			if ( ServerList[j].IP == DetailAddress )
+				bDetailsDirty = true;
 			ServerList[j].iPing = NO_RESPONSE_PING;
 			ServerList[j].bQueryPending = true;
 			ServerList[j].fQuerySent = now;//1.5 - start of the rough ping measurement
@@ -387,12 +553,15 @@ function Refresh(bool bActivatedByUser)
 		}
 		j++;
 	}
+	// Reapply response-dependent filters immediately after invalidating snapshots.
+	if ( m_ConnectionTab == TAB_Internet_Server )
+		bListDirty = true;
 }
 
 //0.8 written
 //1.3 added mod keyword locking
 //1.5 receive locked info from specific servers, not master list
-function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked)
+function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string sGMode,string sMapName,string sSvrName,string sModName,bool bSvrLocked,bool bDedicated)
 {
 	local R6WindowListServerItem CurServer;
 	local int i,iTime;
@@ -409,11 +578,14 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 		{
 			ServerList[i].ServerName = sSvrName;
 			ServerList[i].Locked = bSvrLocked;
+			ServerList[i].bDedicated = bDedicated;
 			ServerList[i].iMaxPlayers = iMaxP;
 			ServerList[i].iNumPlayers = iNumP;
 			ServerList[i].szGameType = pLevel.GetGameNameLocalization(sGMode);
 			ServerList[i].szMap = sMapName;
 			ServerList[i].bWrongVersion = ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) );
+			if ( ServerList[i].bHasDetails )
+				ServerList[i].bWrongVersion = !IsCompatibleServer(ServerList[i].Details);
 			//1.7 - the query plus its start time live on the server entry, so
 			//closing the query needs no lookup in a separate bookkeeping array
 			if ( ServerList[i].bQueryPending )
@@ -474,6 +646,8 @@ function ResortServerList(int iCategory, bool _bAscending)
 	m_iLastSortCategory = iCategory;
 	m_bLastTypeOfSort = _bAscending;
 	iListSize = ServerList.length;
+	for ( i = 0; i < iListSize; i++ )
+		ServerList[i].bFavorite = m_GameService.IsAFavorite(ServerList[i].IP);
 	for ( i = 0; i < iListSize - 1; i++ )
 	{
 		for ( j = 0; j < iListSize - 1 - i; j++ )
@@ -482,9 +656,19 @@ function ResortServerList(int iCategory, bool _bAscending)
 			bSwap = false;
 			switch ( iCategory )
 			{
+				case 0://favorite
+					bIntComp = true;
+					iCompare1 = int(ServerList[j].bFavorite);
+					iCompare2 = int(ServerList[j+1].bFavorite);
+					break;
 				case 1://locked
 					sCompare1 = string(ServerList[j].Locked);
 					sCompare2 = string(ServerList[j+1].Locked);
+					break;
+				case 2://dedicated
+					bIntComp = true;
+					iCompare1 = int(ServerList[j].bDedicated);
+					iCompare2 = int(ServerList[j+1].bDedicated);
 					break;
 				case 5://name
 					sCompare1 = ServerList[j].ServerName;
@@ -507,7 +691,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 					iCompare1 = ServerList[j].iNumPlayers;
 					iCompare2 = ServerList[j+1].iNumPlayers;
 					break;
-				default://ping sort and ALL unsupported right now (fav, punkbuster, dedicated) sort by ping - todo: add support for displaying and sorting by dedicated server, favorites
+				default://ping sort; unsupported PunkBuster category also sorts by ping
 					bIntComp = true;
 					iCompare1 = ServerList[j].iPing;
 					iCompare2 = ServerList[j+1].iPing;
@@ -527,7 +711,9 @@ function ResortServerList(int iCategory, bool _bAscending)
 				else
 					bSwap =  sCompare1 < sCompare2;
 			}
-			bSwap = ( ( bSwap || ( ServerList[j].iPing == NO_RESPONSE_PING ) ) && ( ServerList[j+1].iPing != NO_RESPONSE_PING ) );//always send servers with no response to the bottom of the list
+			// Favorite ordering takes priority even for servers that have not replied.
+			if ( iCategory != 0 )
+				bSwap = ( ( bSwap || ( ServerList[j].iPing == NO_RESPONSE_PING ) ) && ( ServerList[j+1].iPing != NO_RESPONSE_PING ) );
 			if ( bSwap )
 			{
 				temp = ServerList[j];
@@ -537,6 +723,77 @@ function ResortServerList(int iCategory, bool _bAscending)
 		}
 	}
 	GetGSServers();//forces a rebuild in the menu list items based on our resorted ServerList array
+}
+
+// Internet rows belong to ServerList, not the retired Ubisoft sorted list.
+// Persist their full IP:port through the game's existing favorites storage.
+function AddServerToFavorites()
+{
+	if ( m_ConnectionTab == TAB_Lan_Server )
+		super.AddServerToFavorites();
+	else
+		SetInternetFavorite(true);
+}
+
+function DelServerFromFavorites()
+{
+	if ( m_ConnectionTab == TAB_Lan_Server )
+		super.DelServerFromFavorites();
+	else
+		SetInternetFavorite(false);
+}
+
+function SetInternetFavorite(bool bFavorite)
+{
+	local R6WindowListServerItem Selected;
+	local string Address;
+	local int i;
+
+	if ( m_ServerListBox == None )
+		return;
+	Selected = R6WindowListServerItem(m_ServerListBox.m_SelectedItem);
+	if ( Selected == None || Selected.szIPAddr == "" )
+		return;
+	Address = Selected.szIPAddr;
+	m_GameService.NativeInitFavorites();
+	for ( i = 0; i < m_GameService.m_favoriteServersList.Length; i++ )
+	{
+		if ( m_GameService.m_favoriteServersList[i] == Address )
+		{
+			if ( !bFavorite )
+			{
+				m_GameService.m_favoriteServersList.Remove(i,1);
+				m_GameService.NativeUpdateFavorites();
+			}
+			return;
+		}
+	}
+	if ( bFavorite )
+	{
+		m_GameService.m_favoriteServersList[m_GameService.m_favoriteServersList.Length] = Address;
+		m_GameService.NativeUpdateFavorites();
+	}
+}
+
+// Keep context-menu actions off the unrelated Ubisoft server indices.
+function UpdateFavorites()
+{
+	local string Action;
+
+	if ( m_ConnectionTab == TAB_Lan_Server )
+	{
+		super.UpdateFavorites();
+		return;
+	}
+	Action = m_pRightClickMenu.GetValue();
+	if ( Action == Localize("MultiPlayer","RightClick_AddFav","R6Menu") )
+		AddServerToFavorites();
+	else if ( Action == Localize("MultiPlayer","RightClick_SubFav","R6Menu") )
+		DelServerFromFavorites();
+	else if ( Action == Localize("MultiPlayer","RightClick_Refr","R6Menu") )
+		Refresh(false);
+
+	ResortServerList(m_iLastSortCategory,m_bLastTypeOfSort);
 }
 
 // ManageTabSelection() performs various actions when a user changes the tab in
@@ -561,6 +818,7 @@ function ManageTabSelection(INT _MPTabChoiceID)
 			SaveConfig();
 			break;
 		case MultiPlayerTabID.TAB_Internet_Server:
+			m_GameService.NativeInitFavorites();//pick up changes made through the LAN browser
 			m_ConnectionTab = TAB_Internet_Server;
 			m_LoginSuccessAction = eLSAct_InternetTab;
 			m_pLoginWindow.StartLogInProcedure(self);

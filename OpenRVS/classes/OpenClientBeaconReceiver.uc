@@ -3,6 +3,7 @@
 class OpenClientBeaconReceiver extends ClientBeaconReceiver transient;
 
 var OpenMultiPlayerWidget Widget;
+var R6ServerList DetailDecoder;
 
 //call this function with the ip and server beacon port (regular port + 1000) of the server to get info from
 function QuerySingleServer(OpenMultiPlayerWidget OMPW, coerce string sIP, coerce int sPort)
@@ -26,7 +27,31 @@ event ReceivedText(IpAddr Addr, string Text)
 	local string sNumP,sMaxP,sGMode,sMapName,sSvrName;
 	local string sModName;//1.3
 	local bool bSvrLocked;//1.5
+	local bool bDedicated;
+	local int i, Oldest;
+	local bool bHaveSlot;
+	local IpAddr GameAddress;
 
+	if ( left(Text,len(BeaconProduct)+1) ~= (BeaconProduct$" ") )
+	{
+		szSecondWord = mid(Text,len(BeaconProduct)+1);
+		szThirdWord = mid(szSecondWord,InStr(szSecondWord," ")+1);
+		if ( left(szThirdWord,len(KeyWordMarker)+1) ~= (KeyWordMarker$" ") )
+		{
+			GameAddress = Addr;
+			GameAddress.Port = int(szSecondWord);
+			for ( i = 0; i < arraycount(Beacons); i++ )
+			{
+				if ( Beacons[i].Addr.Addr == 0 ||
+					(Beacons[i].Addr.Addr == GameAddress.Addr && Beacons[i].Addr.Port == GameAddress.Port) )
+					bHaveSlot = true;
+				if ( Beacons[i].Time < Beacons[Oldest].Time )
+					Oldest = i;
+			}
+			if ( !bHaveSlot )
+				ClearBeacon(Oldest);
+		}
+	}
 	super.ReceivedText(Addr,Text);
 
 	if ( left(Text,len(BeaconProduct)+1) ~= (BeaconProduct$" ") )
@@ -53,12 +78,44 @@ event ReceivedText(IpAddr Addr, string Text)
 			sSvrName = ParseOption(szThirdWord,SvrNameMarker);
 			sModName = ParseOption(szThirdWord,ModNameMarker);//1.3 - sModName string added to function in MP menu
 			bSvrLocked = bool(ParseOption(szThirdWord,LockedMarker));//1.5 - locked info received here
+			// DecicatedMarker is the stock protocol name (including its spelling).
+			bDedicated = bool(int(ParseOption(szThirdWord,DecicatedMarker)));
 			if ( Widget != None )
-				Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked);//send received info back to server list
+				Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked,bDedicated);//send received info back to server list
 			if (class'OpenLogger'.static.IsDebugEnabled())
 				class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
 		}
 	}
+}
+
+// Decode and copy details immediately, before the fixed beacon cache can
+// expire or be reused. The stock converter already handles maps and players.
+function DecodeKeyWordString(int BeaconIndex, string Keywords)
+{
+	local IpAddr Address;
+	local R6ServerList.stGameData Data;
+	local ClientBeaconReceiver.BeaconInfo EmptyBeacon;
+	local string BeaconText;
+
+	Address = Beacons[BeaconIndex].Addr;
+	BeaconText = Beacons[BeaconIndex].Text;
+	// ClearBeacon in the stock receiver leaves several optional fields and
+	// player statistics intact. Replace the entire struct for each snapshot.
+	Beacons[BeaconIndex] = EmptyBeacon;
+	Beacons[BeaconIndex].Addr = Address;
+	Beacons[BeaconIndex].Text = BeaconText;
+	Beacons[BeaconIndex].Time = Level.TimeSeconds;
+	super.DecodeKeyWordString(BeaconIndex,Keywords);
+	if ( Widget == None )
+		return;
+	if ( DetailDecoder == None )
+	{
+		DetailDecoder = new class'R6ServerList';
+		DetailDecoder.m_ClientBeacon = self;
+	}
+	Data = DetailDecoder.getSvrData(BeaconIndex);
+	Data.bAdversarial = Level.IsGameTypeAdversarial(Data.szGameDataGameType);
+	Widget.ReceiveServerDetails(IpAddrToString(Address),Data);
 }
 
 //overridden from parent

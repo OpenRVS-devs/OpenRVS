@@ -1,5 +1,8 @@
 // OpenLogger writes leveled logs to <GameDir>\system\ravenshield.log.
-class OpenLogger extends Object;
+class OpenLogger extends Object config(openrvs);
+
+var config bool DebugMode;
+var bool bConfigLoaded;
 
 const LOG_LEVEL_ERROR = "error";
 const LOG_LEVEL_WARNING = "warning";
@@ -27,7 +30,7 @@ static function Info(string s, optional Object o)
 }
 
 // Use Debug() for messages only developers should see.
-// Enable debug logging for development builds in IsDebugEnabled() below.
+// Enable with [OpenRVS.OpenLogger] DebugMode=True in openrvs.ini, then restart.
 static function Debug(string s, optional Object o)
 {
 	if (class'OpenLogger'.static.IsDebugEnabled())
@@ -41,9 +44,18 @@ static function Debug(string s, optional Object o)
 //       class'OpenLogger'.static.Debug("value is " $ value, self);
 static function bool IsDebugEnabled()
 {
-	local bool debugMode;
-	debugMode = false;//WARNING: Set to false before building releases for users!
-	return debugMode;
+	local OpenLogger Settings;
+
+	// Load once, including when called before the startup banner. Never read
+	// the INI or allocate an object on subsequent debug checks.
+	if ( !default.bConfigLoaded )
+	{
+		Settings = new class'OpenLogger';
+		Settings.LoadConfig();
+		default.DebugMode = Settings.DebugMode;
+		default.bConfigLoaded = true;
+	}
+	return default.DebugMode;
 }
 
 // writeMsg consistently formats OpenRVS logs, prepending the name of the caller
@@ -68,9 +80,9 @@ static function writeMsg(string s, string level, optional Object o)
 }
 
 // Prints the OpenRVS startup message to the log file.
-static function LogStartupMessage()
+static function LogStartupMessage(optional string Version)
 {
-	log("	 ---- OpenRVS ----");
+	log("	 ---- OpenRVS " $ Version $ " ----");
 	log("	 The team: Twi, Will, and Tony");//v1.5 update name
 	log("	 With thanks to chriswak, Psycho, SMC clan, and SS clan");
 }

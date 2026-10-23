@@ -1,19 +1,26 @@
 class OpenString extends Object;
 
 // The native (string).Split() function is missing in this game. Replace it.
-// Only supports single-character separators.
+// Supports multi-character separators and preserves empty fields.
+// An empty separator returns the input as a single field.
 static function int Split(string input, string sep, out array<string> fields)
 {
 	local int i;
 	local bool done;
 
 	fields.Remove(0, fields.Length);
+	if (sep == "")
+	{
+		fields[0] = input;
+		return fields.Length;
+	}
+
 	while (!done) {
 		i = InStr(input, sep);
 		if (i != -1)//sep is present, there are more fields
 		{
 			fields[fields.Length] = Mid(input, 0, i);//save the field text
-			input = Mid(input, i+1);//trim the string for the next iteration
+			input = Mid(input, i+Len(sep));//trim the string for the next iteration
 		}
 		else//final field
 		{

@@ -1,6 +1,6 @@
 class OpenRVS extends Object;
 
-const OPENRVS_VERSION = "v1.6";
+const OPENRVS_VERSION = "v1.8";
 // This URL returns the latest release version from GitHub over HTTP.
 const LATEST_VERSION_URL = "http://api.openrvs.org/latest";
 
@@ -11,7 +11,7 @@ var OpenHTTPClient httpc;
 // OpenCustomMissionWidget, while servers call Init from OpenServer.
 function Init(Actor a)
 {
-	class'OpenLogger'.static.LogStartupMessage();
+	class'OpenLogger'.static.LogStartupMessage(OPENRVS_VERSION);
 
 	// Fire off version-checking request.
 	httpc = a.Spawn(class'OpenHTTPClient');
@@ -30,14 +30,14 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 
 	if (resp.Code != 200)
 	{
-		class'OpenLogger'.static.Error("failed to retrieve latest version over http", self);
+		class'OpenLogger'.static.Warning("update check unavailable; HTTP status:" @ resp.Code, self);
 		return;
 	}
 
 	// The response body is the latest version string, e.g. "v1.6".
 	if (resp.Lines.Length == 0)
 	{
-		class'OpenLogger'.static.Error("latest version response was empty", self);
+		class'OpenLogger'.static.Warning("update check unavailable; latest version response was empty", self);
 		return;
 	}
 	latest = resp.Lines[0];
@@ -56,7 +56,7 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 		WarningWindow.AddText(warning);
 		WarningWindow.AddText("Click the link below to download the latest update.");
 		WarningWindow.AddText("");
-		WarningWindow.MakeURLButton("https://www.moddb.com/search?q=openrvs","Download from ModDB");
+		WarningWindow.MakeURLButton("https://github.com/OpenRVS-devs/OpenRVS/releases","Download from GitHub");
 	}
 	else
 		class'OpenLogger'.static.Info("OpenRVS is up to date (" $ latest $ ")", self);

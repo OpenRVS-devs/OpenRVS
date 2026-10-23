@@ -84,7 +84,10 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 	//Check for errors.
 	if (resp.Code != 200 || resp.Lines.Length == 0)
 	{
-		class'OpenLogger'.static.Error("failed to retrieve servers over http", self);
+		if (resp.Code != 200)
+			class'OpenLogger'.static.Warning("server list request failed; HTTP status:" @ resp.Code @ "; using Servers.list fallback", self);
+		else
+			class'OpenLogger'.static.Warning("server list response was empty; using Servers.list fallback", self);
 		SendServersUpstream(GetFallbackServers());
 		return;
 	}
@@ -106,7 +109,7 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 	}
 
 	// Fall back to local file.
-	class'OpenLogger'.static.Error("unknown server list response type", self);
+	class'OpenLogger'.static.Warning("unknown server list response type; using Servers.list fallback", self);
 	SendServersUpstream(GetFallbackServers());
 }
 

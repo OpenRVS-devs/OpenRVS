@@ -70,7 +70,7 @@ function SetMenuMODS()
 	//1.4
 	// Applies the FOV fix and custom cheat manager, shared with
 	// OpenMenuIntelWidget.
-	class'OpenFOV'.static.ApplyClassDefaults(self);
+	class'OpenConfigManager'.static.ApplyClassDefaults(self);
 }
 
 //1.4 jump straight to mod

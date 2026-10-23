@@ -18,6 +18,9 @@ A patch to fix Red Storm Entertainment's mistakes (intentional and otherwise). A
 1. Stop your game if it's running.
 2. Extract the contents of the OpenRVS ZIP file to your game's `system`
    directory. For Steam, this is `steamapps\common\Rainbow Six 3 Gold\system`.
+   When upgrading an older installation, remove old `OpenRenderFix.utx` copies
+   from the game's package directories. The release now installs the code package
+   as `system/OpenRenderFix.u`, which matches the game's `System/*.u` search path.
 3. Optionally adjust your FOV in `openrvs.ini` - see the `[OpenRVS.OpenFOV]`
    section.
 4. Launch the game! You'll see a list of servers to choose from, or you can join
@@ -39,6 +42,11 @@ ServerActors=OpenRVS.OpenBeacon
 ServerActors=OpenRenderFix.OpenFix
 ServerPackages=OpenRenderFix
 ```
+   Apply these settings to listen hosts started through the in-game menu too.
+   `OpenRenderFix.OpenFix` replaces the host's local `OpenRVS.OpenHUD` with
+   `OpenRenderFix.OpenRender`; `ServerPackages=OpenRenderFix` makes that HUD
+   package available to joining clients. Keep both settings together. HUDs
+   supplied by other mods are preserved.
 5. Edit `system/RavenShield.ini`, and ensure that your `ServerBeaconPort` is set
    to exactly 1000 above your server's `Port`, and that `BeaconPort` is exactly
    2000 above your server's `Port`.
@@ -97,7 +105,7 @@ The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories
 
 Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to weapon rendering in multiplayer.
 
-In order to enable debug logging, edit `OpenLogger.uc` and change `false` to `true` where instructed.
+To enable debug logging, set `DebugMode=True` under `[OpenRVS.OpenLogger]` in `openrvs.ini`, then restart the game or server. The default is `False`.
 
 ## OpenRVS Libraries
 

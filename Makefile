@@ -18,7 +18,7 @@ BUILD_ARGS = $(COMMON_ARGS) --packages "$(PACKAGES)"
 # Pass through values that are not Make-specific.
 export WINE WINE_PREFIX WINEARCH STRIP ALLOW_OVERWRITE WINEDEBUG DISTROBOX_NAME
 
-.PHONY: all build check clean distclean openrvs openrenderfix help
+.PHONY: all build check clean distclean openrvs openrenderfix help release
 
 all: build
 
@@ -46,6 +46,7 @@ help:
 	@printf '  make / make build   Build all requested packages\n'
 	@printf '  make openrvs        Build OpenRVS only\n'
 	@printf '  make openrenderfix  Build OpenRenderFix only\n'
+	@printf '  make release        Package release ZIP using the latest tag name\n'
 	@printf '  make check          Verify SDK, Wine, and source prerequisites\n'
 	@printf '  make clean          Remove build/ and generated SDK staging dirs\n'
 	@printf '  make distclean      clean, and remove the default Wine prefix\n'
@@ -55,3 +56,14 @@ help:
 	@printf '  make WINE_PREFIX=$$HOME/.wine-rvs\n'
 	@printf '  make PACKAGES="OpenRVS"\n'
 	@printf '  make DISTROBOX_NAME=  # Build locally instead of in openrvs\n'
+
+release:
+	@set -eu; \
+	tag=$$(git -C "$(REPO_ROOT)" tag --sort=-version:refname | head -n 1); \
+	test -n "$$tag" || { echo 'No Git tags found' >&2; exit 1; }; \
+	archive="$(REPO_ROOT)/OpenRVS-$$tag.zip"; \
+	for file in "$(BUILD_DIR)/OpenRenderFix.u" "$(REPO_ROOT)/openrvs.ini" "$(BUILD_DIR)/OpenRVS.u" "$(REPO_ROOT)/R6ClassDefines.ini" "$(REPO_ROOT)/Servers.list"; do \
+		test -f "$$file" || { echo "Missing release file: $$file" >&2; exit 1; }; \
+	done; \
+	python3 -c 'import pathlib, sys, zipfile; archive = zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED); [archive.write(path, pathlib.Path(path).name) for path in sys.argv[2:]]; archive.close()' "$$archive" "$(BUILD_DIR)/OpenRenderFix.u" "$(REPO_ROOT)/openrvs.ini" "$(BUILD_DIR)/OpenRVS.u" "$(REPO_ROOT)/R6ClassDefines.ini" "$(REPO_ROOT)/Servers.list"; \
+	echo "Created $$archive"

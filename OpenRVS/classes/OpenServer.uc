@@ -106,7 +106,7 @@ function ScanControllers()
 		{
 			if ( !bLogged )
 			{
-				class'OpenLogger'.static.Info("Current Status: Validating players", self);
+				class'OpenLogger'.static.Debug("Current Status: Validating players", self);
 				bLogged = true;
 			}
 			//THE IMPORTANT STUFF
@@ -159,8 +159,6 @@ function bool HandleBans(R6PlayerController P)
 	//log each player's IP address
 	//TO DO:
 	//log the time of joining as well
-	if (class'OpenLogger'.static.IsDebugEnabled())
-		class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
 		if ( Level.Game.AccessControl.Banned[i] != "" && Level.Game.AccessControl.Banned[i] == P.m_szGlobalID )
