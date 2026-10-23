@@ -33,6 +33,7 @@ var string FileName;
 // Starts OpenServerList and send an HTTP request to the server list provider.
 function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F)
 {
+	CancelRequest();
 	M = Widget;
 	if ( W != "" )
 		WebAddress = W;
@@ -43,13 +44,33 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 	else
 		FileName = "servers";
 
-	// Each client handles one request and destroys itself once the response has
-	// been delivered, so spawning here on every Init() does not accumulate
-	// actors. The callback in ParseServers() clears our reference.
+	// Only the latest request may update the current widget.
 	httpc = Spawn(class'OpenHTTPClient');
+	if ( httpc == None )
+	{
+		SendServersUpstream(GetFallbackServers());
+		return;
+	}
 	httpc.CallbackName = "server_list";
 	httpc.ServerListCallbackProvider = self;
 	httpc.SendRequest("http://" $ WebAddress $ "/" $ FileName);
+}
+
+function CancelRequest()
+{
+	local OpenHTTPClient previous;
+
+	previous = httpc;
+	httpc = None;
+	if ( previous != None )
+		previous.CancelRequest();
+}
+
+event Destroyed()
+{
+	CancelRequest();
+	M = None;
+	super.Destroyed();
 }
 
 // Receives and detects type for an HTTP response from the server list provider.
@@ -193,6 +214,8 @@ function SendServersUpstream(array<AServer> servers)
 	local int i;
 
 	class'OpenLogger'.static.Info("loading" @ servers.Length @ "parsed servers", self);
+	if ( M == None )
+		return;
 	M.ClearServerList();
 	for (i=0; i<servers.Length; i++)
 	{

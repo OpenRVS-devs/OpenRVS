@@ -62,11 +62,24 @@ function QueryReceivedStartPreJoin ()
 // Added in 0.8 - made this function load saved URL for server list
 function Created()
 {
+	local Actor listOwner;
+	local OpenServerList existingList;
+
 	super.Created();
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
-	OS = Root.Console.ViewportOwner.Actor.spawn(class'OpenServerList');//get the server list over http
-	OS.Init(self,ServerURL,ServerListURL);//0.8 made this load saved config vars in openrvs.ini
+	// Reuse the level's provider across menu rebuilds. Init cancels its old
+	// request and replaces the reference to the previous widget.
+	listOwner = Root.Console.ViewportOwner.Actor;
+	foreach listOwner.AllActors(class'OpenServerList', existingList)
+	{
+		OS = existingList;
+		break;
+	}
+	if ( OS == None )
+		OS = listOwner.Spawn(class'OpenServerList');
+	if ( OS != None )
+		OS.Init(self,ServerURL,ServerListURL);
 }
 
 //couldn't get server list

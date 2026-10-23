@@ -245,11 +245,22 @@ private function triggerCallbacks()
 	finishRequest();//all done, release the actor
 }
 
+// Cancel without delivering a result to the previous callback provider.
+function CancelRequest()
+{
+	SetTimer(0, false);
+	CallbackName = "";
+	ServerListCallbackProvider = None;
+	VersionCheckCallbackProvider = None;
+	finishRequest();
+}
+
 // Resets the instance and destroys it. A client is spawned per request and has
 // nothing left to do after its callback, so keeping it alive would only leave
 // an idle ticking TcpLink actor behind for the rest of the session.
 private function finishRequest()
 {
+	SetTimer(0, false);
 	resetHttpClient();
 	Destroy();
 }
@@ -405,6 +416,8 @@ function ServerListCallback(HttpResponse resp)
 		class'OpenLogger'.static.Debug("ServerListCallbackProvider was none", self);
 		return;//nothing to do
 	}
+	if ( ServerListCallbackProvider.httpc != self )
+		return;//a newer request owns the provider now
 	ServerListCallbackProvider.ParseServers(resp);
 }
 
