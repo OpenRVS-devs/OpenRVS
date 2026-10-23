@@ -148,6 +148,7 @@ function string BuildBeaconText()
 	myList = GetMapList();
 	mapNames = "";
 	gameTypeNames = "";
+	if ( myList != None )
 	for ( iCounter = 0; iCounter < arraycount(myList.Maps); iCounter++ )
 	{
 		if ( myList.Maps[iCounter] != "" )
@@ -169,7 +170,8 @@ function string BuildBeaconText()
 	for (_Controller=Level.ControllerList; _Controller!=None; _Controller=_Controller.NextController)
 	{
 		aPC = PlayerController(_Controller);
-		if (aPC!=none)
+		if (aPC!=none && iNumPlayers < arraycount(iPingTimeMS)
+			&& iNumPlayers < arraycount(iKillCount) && iNumPlayers < arraycount(fPlayingTime))
 		{
 			textData = textData $ "/" $ aPC.PlayerReplicationInfo.PlayerName;
 			if ( NetConnection( aPC.Player) == None )

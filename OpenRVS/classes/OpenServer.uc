@@ -35,10 +35,17 @@ event PreBeginPlay()
 //this server with the OpenRVS registry.
 event PostNetBeginPlay()
 {
+	local OpenBeacon beacon;
+	local R6AbstractGameInfo gameInfo;
+
 	super.PostNetBeginPlay();
 
 	//send a UDP beacon to the registry
-	OpenBeacon(R6AbstractGameInfo(Level.Game).m_UdpBeacon).RegisterServer();
+	gameInfo = R6AbstractGameInfo(Level.Game);
+	if ( gameInfo != None )
+		beacon = OpenBeacon(gameInfo.m_UdpBeacon);
+	if ( beacon != None )
+		beacon.RegisterServer();
 }
 
 //find a player who hasn't been validated
