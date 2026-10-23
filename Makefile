@@ -45,7 +45,7 @@ help:
 	@printf '\nMake targets:\n'
 	@printf '  make / make build   Build all requested packages\n'
 	@printf '  make openrvs        Build OpenRVS only\n'
-	@printf '  make openrenderfix  Build OpenRenderFix only\n'
+	@printf '  make openrenderfix  Copy pinned v1.6 OpenRenderFix\n'
 	@printf '  make release        Package release ZIP using the latest tag name\n'
 	@printf '  make check          Verify SDK, Wine, and source prerequisites\n'
 	@printf '  make clean          Remove build/ and generated SDK staging dirs\n'
@@ -59,6 +59,8 @@ help:
 
 release:
 	@set -eu; \
+	(cd "$(REPO_ROOT)/vendor/OpenRenderFix-v1.6" && sha256sum --check SHA256SUMS); \
+	cmp "$(BUILD_DIR)/OpenRenderFix.u" "$(REPO_ROOT)/vendor/OpenRenderFix-v1.6/OpenRenderFix.u"; \
 	tag=$$(git -C "$(REPO_ROOT)" tag --sort=-version:refname | head -n 1); \
 	test -n "$$tag" || { echo 'No Git tags found' >&2; exit 1; }; \
 	archive="$(REPO_ROOT)/OpenRVS-$$tag.zip"; \

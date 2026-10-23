@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build OpenRVS and OpenRenderFix with Twi's Raven Shield SDK2.
+# Build OpenRVS and copy the pinned OpenRenderFix binary with Twi's Raven Shield SDK2.
 #
 # This script drives the Windows UCC.exe toolchain under Wine but handles all
 # staging, ini generation, stripping, and artifact copying with native Linux
@@ -28,6 +28,7 @@ PACKAGES="${PACKAGES:-OpenRVS OpenRenderFix}"
 STRIP="${STRIP:-1}"
 ALLOW_OVERWRITE="${ALLOW_OVERWRITE:-0}"
 
+PINNED_RENDER="$REPO_ROOT/vendor/OpenRenderFix-v1.6"
 ALL_PACKAGES="OpenRVS OpenRenderFix"
 MODE=build
 INI_GENERATED=0
@@ -438,11 +439,13 @@ copy_artifacts() {
 	local p artifacts=()
 
 	mkdir -p -- "$BUILD_DIR"
-	rm -f -- "$BUILD_DIR/OpenRVS.u" "$BUILD_DIR/OpenRVS.utx"
-	rm -f -- "$BUILD_DIR/OpenRenderFix.u" "$BUILD_DIR/OpenRenderFix.utx"
-
-	for p in $PACKAGES; do
-		cp -f -- "$SYS/$p.u" "$BUILD_DIR/$p.u"
+	for p in $REQUESTED_PACKAGES; do
+		rm -f -- "$BUILD_DIR/$p.utx"
+		if [[ "$p" == OpenRenderFix ]]; then
+			cp -f -- "$PINNED_RENDER/OpenRenderFix.u" "$BUILD_DIR/$p.u"
+		else
+			cp -f -- "$SYS/$p.u" "$BUILD_DIR/$p.u"
+		fi
 		artifacts+=("$BUILD_DIR/$p.u")
 
 	done
@@ -495,12 +498,21 @@ case "$MODE" in
 		fi
 		;;
 	build)
-		check_prereqs
-		stage_sources
-		select_sdk_version
-		generate_ini
-		compile_packages
-		strip_packages
+		# Never rebuild the network-distributed package under its existing name.
+		(cd "$PINNED_RENDER" && sha256sum --check SHA256SUMS) || die "invalid pinned OpenRenderFix binary"
+		REQUESTED_PACKAGES="$PACKAGES"
+		PACKAGES=""
+		for p in $REQUESTED_PACKAGES; do
+			[[ "$p" == OpenRenderFix ]] || PACKAGES+=" $p"
+		done
+		if [[ -n "${PACKAGES// /}" ]]; then
+			check_prereqs
+			stage_sources
+			select_sdk_version
+			generate_ini
+			compile_packages
+			strip_packages
+		fi
 		copy_artifacts
 		;;
 esac

@@ -60,8 +60,9 @@ ServerActors=OpenRenderFix.OpenFix
 ServerPackages=OpenRenderFix
 ```
    Apply these settings to listen hosts started through the in-game menu too.
-   `OpenRenderFix.OpenFix` replaces the host's local `OpenRVS.OpenHUD` with
-   `OpenRenderFix.OpenRender`; `ServerPackages=OpenRenderFix` makes that HUD
+   On listen servers only, `OpenRVS.OpenServer` replaces the host's local
+   `OpenRVS.OpenHUD` with `OpenRenderFix.OpenRender`;
+   `ServerPackages=OpenRenderFix` makes that HUD
    package available to joining clients. Keep both settings together. HUDs
    supplied by other mods are preserved.
 5. Edit `system/RavenShield.ini`, and ensure that your `ServerBeaconPort` is set
@@ -120,7 +121,13 @@ The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories
 1. Copy `OpenRVS.u` and/or `OpenRenderFix.u` to your game directory's `system` folder (both client and server)
 1. Test your changes in-game by connecting to the server
 
-Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to weapon rendering in multiplayer.
+For compatible releases, reuse the exact OpenRenderFix binary distributed with
+v1.6, renamed from `OpenRenderFix.utx` to `OpenRenderFix.u`. Do not recompile
+that package for distribution: reverting its source does not restore the released
+package identity. The build copies and verifies the pinned binary in `vendor/OpenRenderFix-v1.6`
+instead of compiling or stripping it. `make release` rejects any different binary. Keep only one
+copy installed. Changes to this shared package require a separate compatibility
+plan and cross-version join testing.
 
 To enable debug logging, set `DebugMode=True` under `[OpenRVS.OpenLogger]` in `openrvs.ini`, then restart the game or server. The default is `False`.
 
