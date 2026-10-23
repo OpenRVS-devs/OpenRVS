@@ -38,7 +38,7 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 			{
 				// handle invalid ip string format here
 				PopUpBoxDone(MR_OK,EPopUpID_JoinIPError);
-				class'OpenLogger'.static.Info("Invalid IP string entered", self);
+				class'OpenLogger'.static.Warning("Invalid IP string entered", self);
 			}
 			else
 			{
@@ -80,7 +80,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 			// Verify that the server is the same version as the game
 			if ( Root.Console.ViewportOwner.Actor.GetGameVersion() != m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion )
 			{
-				class'OpenLogger'.static.Error("VERSION FAIL", self);
+				class'OpenLogger'.static.Error("game version mismatch; local:" @ Root.Console.ViewportOwner.Actor.GetGameVersion() @ "server:" @ m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion, self);
 				eState = EJOINIP_BEACON_FAIL;
 				m_pPleaseWait.HideWindow();
 				m_pError.ShowWindow();
@@ -88,7 +88,7 @@ function Manager( UWindowWindow _pCurrentWidget )
 			}
 			else if ( R6Console(Root.console).m_bNonUbiMatchMaking )
 			{
-				class'OpenLogger'.static.Error("NON UBI MATCHMAKING", self);
+				class'OpenLogger'.static.Debug("joining server without Ubisoft matchmaking", self);
 				_pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
 				if (!m_bStartByCmdLine)
 				HideWindow();

@@ -60,7 +60,7 @@ event Resolved(IpAddr addr)
 
 event ResolveFailed()
 {
-	class'OpenLogger'.static.Error("failed to resolve registration ip; will not send auto-registration beacon", self);
+	class'OpenLogger'.static.Warning("registry DNS resolution failed; automatic server listing unavailable", self);
 }
 
 event ReceivedText(IpAddr Addr, string Text)

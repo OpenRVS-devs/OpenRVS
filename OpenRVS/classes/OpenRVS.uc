@@ -11,7 +11,7 @@ var OpenHTTPClient httpc;
 // OpenCustomMissionWidget, while servers call Init from OpenServer.
 function Init(Actor a)
 {
-	class'OpenLogger'.static.LogStartupMessage();
+	class'OpenLogger'.static.LogStartupMessage(OPENRVS_VERSION);
 
 	// Fire off version-checking request.
 	httpc = a.Spawn(class'OpenHTTPClient');
@@ -30,14 +30,14 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 
 	if (resp.Code != 200)
 	{
-		class'OpenLogger'.static.Error("failed to retrieve latest version over http", self);
+		class'OpenLogger'.static.Warning("update check unavailable; HTTP status:" @ resp.Code, self);
 		return;
 	}
 
 	// The response body is the latest version string, e.g. "v1.6".
 	if (resp.Lines.Length == 0)
 	{
-		class'OpenLogger'.static.Error("latest version response was empty", self);
+		class'OpenLogger'.static.Warning("update check unavailable; latest version response was empty", self);
 		return;
 	}
 	latest = resp.Lines[0];

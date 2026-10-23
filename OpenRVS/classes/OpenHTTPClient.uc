@@ -91,7 +91,7 @@ event ResolveFailed()
 	if ( bPendingDelete || bDeleteMe )//cleanup already started, nothing to report
 		return;
 
-	class'OpenLogger'.static.Error("dns resolution failed", self);
+	class'OpenLogger'.static.Warning("DNS resolution failed for" @ Host $ ":" $ Port @ "callback:" @ CallbackName, self);
 	triggerCallbacks();//caller still needs to process a result; this also destroys the client
 }
 
@@ -143,7 +143,7 @@ event Closed()
 	resp = parseHttpResponse(kiloBuffer);
 	if (resp.Code == -1)//this is not an HTTP response
 	{
-		class'OpenLogger'.static.Debug("response was not HTTP, reporting failure", self);
+		class'OpenLogger'.static.Warning("invalid or incomplete HTTP response from" @ Host $ ":" $ Port @ "callback:" @ CallbackName, self);
 		triggerCallbacks();//report the empty response so callers can fall back
 		return;
 	}
@@ -152,7 +152,7 @@ event Closed()
 	Response = resp;
 
 	if (Response.Code != 200)//warn and continue
-		class'OpenLogger'.static.Warning("http request failed with code" @ Response.Code, self);
+		class'OpenLogger'.static.Warning("HTTP status" @ Response.Code @ "from" @ Host $ ":" $ Port @ "callback:" @ CallbackName, self);
 
 	triggerCallbacks();
 }
@@ -161,7 +161,7 @@ event Closed()
 // response so the caller can fall back, then cleans up like any other request.
 event Timer()
 {
-	class'OpenLogger'.static.Error("http request timed out", self);
+	class'OpenLogger'.static.Warning("HTTP request timed out for" @ Host $ ":" $ Port @ "callback:" @ CallbackName, self);
 	triggerCallbacks();
 }
 
@@ -186,9 +186,6 @@ function bool SendRequest(string url)
 	SetTimer(HTTP_TIMEOUT, false);//do not wait forever for a silent server
 
 	kiloBuffer.Remove(0, kiloBuffer.Length);
-
-	if (CallbackName == "")
-		class'OpenLogger'.static.Debug("callbackName should not be empty", self);
 
 	parsed = parseHttpUrl(url);
 	if ( parsed.Host == "" || parsed.Port < 1 || parsed.Port > 65535 )
@@ -221,7 +218,7 @@ private function triggerCallbacks()
 {
 	if (CallbackName == "")
 	{
-		class'OpenLogger'.static.Debug("callback name was empty", self);
+		class'OpenLogger'.static.Error("HTTP response cannot be delivered: callback name was empty", self);
 		finishRequest();//nothing to call, but still clean up
 		return;
 	}
@@ -237,8 +234,7 @@ private function triggerCallbacks()
 			VersionCheckCallback(Response);
 			break;
 		default:
-			if (class'OpenLogger'.static.IsDebugEnabled())
-				class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
+			class'OpenLogger'.static.Error("HTTP response cannot be delivered: unknown callback name" @ CallbackName, self);
 			break;
 	}
 
@@ -413,7 +409,7 @@ function ServerListCallback(HttpResponse resp)
 {
 	if (ServerListCallbackProvider == none)
 	{
-		class'OpenLogger'.static.Debug("ServerListCallbackProvider was none", self);
+		class'OpenLogger'.static.Warning("HTTP response cannot be delivered: ServerListCallbackProvider was none", self);
 		return;//nothing to do
 	}
 	if ( ServerListCallbackProvider.httpc != self )
@@ -426,7 +422,7 @@ function VersionCheckCallback(HttpResponse resp)
 {
 	if (VersionCheckCallbackProvider == none)
 	{
-		class'OpenLogger'.static.Debug("VersionCheckCallbackProvider was none", self);
+		class'OpenLogger'.static.Warning("HTTP response cannot be delivered: VersionCheckCallbackProvider was none", self);
 		return;//nothing to do
 	}
 	VersionCheckCallbackProvider.CheckVersion(resp);

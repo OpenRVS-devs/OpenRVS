@@ -97,7 +97,7 @@ The SDK expects the OpenRVS code (both `OpenRVS` and `OpenRenderFix` directories
 
 Repeat the above process for `OpenRenderFix` instead of `OpenRVS` to compile changes to weapon rendering in multiplayer.
 
-In order to enable debug logging, edit `OpenLogger.uc` and change `false` to `true` where instructed.
+To enable debug logging, set `DebugMode=True` under `[OpenRVS.OpenLogger]` in `openrvs.ini`, then restart the game or server. The default is `False`.
 
 ## OpenRVS Libraries
 

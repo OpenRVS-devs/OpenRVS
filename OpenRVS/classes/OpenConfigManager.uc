@@ -30,7 +30,8 @@ static function ApplyClassDefaults(optional Object o)
 		if ( CheatClass == none )
 			CheatClass = class'OpenCheat';
 	}
-	class'OpenLogger'.static.Info("experimental SP manager set to:" @ CheatClass, o);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("experimental SP manager set to:" @ CheatClass, o);
 	class'R6PlayerController'.default.CheatClass = CheatClass;
 	s = caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_PlayerCtrlToSpawn);
 	if ( ( s != "" ) && ( InStr(s,"R6ENGINE.") == -1 ) )//mod has custom pc
