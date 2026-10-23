@@ -39,6 +39,11 @@ ServerActors=OpenRVS.OpenBeacon
 ServerActors=OpenRenderFix.OpenFix
 ServerPackages=OpenRenderFix
 ```
+   Apply these settings to listen hosts started through the in-game menu too.
+   `OpenRenderFix.OpenFix` replaces the host's local `OpenRVS.OpenHUD` with
+   `OpenRenderFix.OpenRender`; `ServerPackages=OpenRenderFix` makes that HUD
+   package available to joining clients. Keep both settings together. HUDs
+   supplied by other mods are preserved.
 5. Edit `system/RavenShield.ini`, and ensure that your `ServerBeaconPort` is set
    to exactly 1000 above your server's `Port`, and that `BeaconPort` is exactly
    2000 above your server's `Port`.

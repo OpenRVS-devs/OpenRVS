@@ -67,7 +67,10 @@ m_szGameTypes="RGM_LoneWolfMode"
 [Engine.GameEngine]
 CacheSizeMegs=32
 UseSound=True
-ServerActors=IpDrv.UdpBeacon
+ServerActors=OpenRVS.OpenServer
+ServerActors=OpenRVS.OpenBeacon
+ServerActors=OpenRenderFix.OpenFix
+ServerPackages=OpenRenderFix
 ServerPackages=GamePlay
 ServerPackages=R6Abstract
 ServerPackages=R6Engine
