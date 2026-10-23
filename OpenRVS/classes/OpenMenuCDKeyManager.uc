@@ -1,0 +1,19 @@
+// Installed client side through ClassMenuCDKeyManager in R6ClassDefines.ini.
+class OpenMenuCDKeyManager extends R6MenuCDKeyManager;
+
+// In 1.60 the CD-key manager owns the final browser/Join IP travel step.
+function JoinServer(string _szIPAddress, optional string _szPassword)
+{
+    Root.Console.ConsoleCommand("NETSPEED 100000");
+    // NETSPEED can clamp CurrentNetSpeed to the existing connection's cap.
+    // Seed both the live viewport and defaults for the connection about to open.
+    class'Player'.default.ConfiguredInternetSpeed = 100000;
+    class'Player'.default.ConfiguredLanSpeed = 100000;
+    Root.Console.ViewportOwner.ConfiguredInternetSpeed = 100000;
+    Root.Console.ViewportOwner.ConfiguredLanSpeed = 100000;
+    Root.Console.ViewportOwner.CurrentNetSpeed = 100000;
+
+    class'OpenLogger'.static.Info("Joining server with client netspeed " $
+        Root.Console.ViewportOwner.CurrentNetSpeed, self);
+    super.JoinServer(_szIPAddress, _szPassword);
+}

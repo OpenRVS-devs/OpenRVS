@@ -23,6 +23,11 @@ event PreBeginPlay()
 {
 	local OpenRVS openrvs;
 
+	// The native NETSPEED receiver also caps requests against the server's
+	// Player default, independently of TcpNetDriver.MaxClientRate.
+	class'Player'.default.ConfiguredInternetSpeed = 100000;
+	class'Player'.default.ConfiguredLanSpeed = 100000;
+
 	openrvs = new class'OpenRVS';
 	openrvs.Init(self);//initialize OpenRVS
 	openrvs = none;//done initializing
