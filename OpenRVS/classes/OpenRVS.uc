@@ -1,6 +1,6 @@
 class OpenRVS extends Object;
 
-const OPENRVS_VERSION = "v1.5";
+const OPENRVS_VERSION = "v1.6";
 // This URL returns the latest release version from GitHub over HTTP.
 const LATEST_VERSION_URL = "http://api.openrvs.org/latest";
 
@@ -50,6 +50,8 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 		class'OpenLogger'.static.Warning(warning, self);
 		//v1.5 - add pop up box notification to main menu
 		WarningWindow = class'OpenPopUp'.static.CreatePopUp("OpenRVS Patch Check");
+		if ( WarningWindow == None )
+			return;
 		WarningWindow.AddText("Please note:");
 		WarningWindow.AddText(warning);
 		WarningWindow.AddText("Click the link below to download the latest update.");
