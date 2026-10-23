@@ -121,6 +121,8 @@ function Created()
 {
 	local R6Mod Temp;
 	local OpenRVS openrvs;
+	local int i;
+	local bool hasU, hasUTX;
 
 	openrvs = new class'OpenRVS';
 	openrvs.Init(GetEntryLevel());//initialize OpenRVS
@@ -128,9 +130,30 @@ function Created()
 
 	super.Created();
 	Temp = class'Actor'.static.GetModMgr().m_pCurrentMod;
-	Temp.m_aExtraPaths[Temp.m_aExtraPaths.length] = "..\\Mods\\*.u";
-	Temp.m_aExtraPaths[Temp.m_aExtraPaths.length] = "..\\Mods\\*.utx";
-	class'Actor'.static.GetModMgr().AddNewModExtraPath(Temp,0);
+	for ( i = 0; i < Temp.m_aExtraPaths.Length; i++ )
+	{
+		if ( Temp.m_aExtraPaths[i] ~= "..\\Mods\\*.u" )
+			hasU = true;
+		if ( Temp.m_aExtraPaths[i] ~= "..\\Mods\\*.utx" )
+			hasUTX = true;
+	}
+	if ( !hasU )
+		Temp.m_aExtraPaths[Temp.m_aExtraPaths.Length] = "..\\Mods\\*.u";
+	if ( !hasUTX )
+		Temp.m_aExtraPaths[Temp.m_aExtraPaths.Length] = "..\\Mods\\*.utx";
+	if ( !hasU || !hasUTX )
+		class'Actor'.static.GetModMgr().AddNewModExtraPath(Temp,0);
+}
+
+// Validate before using a custom button ID as a dynamic array index.
+function bool HasValidGameTypeSelection()
+{
+	if ( m_pButCurrent == None )
+		return false;
+	if ( !CurrentIsCustomType )
+		return true;
+	return m_pButCurrent.m_iButtonID >= 99
+		&& m_pButCurrent.m_iButtonID - 99 < NewTypes.Length;
 }
 
 //rewritten from super
@@ -141,6 +164,8 @@ function GotoPlanning()
 	local R6MissionDescription CurrentMission;
 	local R6WindowListBoxItem SelectedItem;
 	local R6Console R6Console;
+	if ( !HasValidGameTypeSelection() )
+		return;
 	R6Root = R6MenuRootWindow(Root);
 	//Make sure that ValidateBeforePlanning() has returned true
 	//Before calling this
@@ -173,6 +198,8 @@ function RefreshList()
 	local   R6WindowListBoxItem  NewItem, ItemToSelect;
 	local   string	   szGameType;
 	local   R6MissionDescription mission;
+	if ( !HasValidGameTypeSelection() )
+		return;
 	r6console = R6Console( Root.Console );
 	if ( CurrentIsCustomType )//need to grab parent type flag
 		szGameType = NewTypes[m_pButCurrent.m_iButtonID - 99].PType;
@@ -257,6 +284,8 @@ function RefreshList()
 function UpdateBackground()
 {
 	local string s;
+	if ( !HasValidGameTypeSelection() )
+		return;
 	if ( CurrentIsCustomType )//need to grab parent type flag
 		s = NewTypes[m_pButCurrent.m_iButtonID - 99].PType;
 	else
