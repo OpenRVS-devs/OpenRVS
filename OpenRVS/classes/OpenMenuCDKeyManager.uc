@@ -1,9 +1,22 @@
 // Installed client side through ClassMenuCDKeyManager in R6ClassDefines.ini.
 class OpenMenuCDKeyManager extends R6MenuCDKeyManager;
 
+// Retained across menu recreation on failed travel; never saved to disk.
+var string JoinCompatibilityInfo;
+
 // In 1.60 the CD-key manager owns the final browser/Join IP travel step.
 function JoinServer(string _szIPAddress, optional string _szPassword)
 {
+    local OpenMultiPlayerWidget Browser;
+    local R6MenuRootWindow MenuRoot;
+
+    default.JoinCompatibilityInfo = "";
+    MenuRoot = R6MenuRootWindow(Root);
+    if ( MenuRoot != None )
+        Browser = OpenMultiPlayerWidget(MenuRoot.m_MultiPlayerWidget);
+    if ( Browser != None )
+        default.JoinCompatibilityInfo = Browser.GetJoinCompatibilityInfo(_szIPAddress);
+
     Root.Console.ConsoleCommand("NETSPEED 100000");
     // NETSPEED can clamp CurrentNetSpeed to the existing connection's cap.
     // Seed both the live viewport and defaults for the connection about to open.

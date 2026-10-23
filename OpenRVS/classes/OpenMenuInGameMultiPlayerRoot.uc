@@ -26,6 +26,8 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 //a function that will let us load custom fov
 function ChangeCurrentWidget( eGameWidgetID widgetID )
 {
+	// Reaching the in-game menus completes the connection attempt.
+	class'OpenMenuCDKeyManager'.default.JoinCompatibilityInfo = "";
 	super.ChangeCurrentWidget(widgetID);
 	if ( FOV == 0 )
 	{

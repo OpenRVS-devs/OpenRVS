@@ -18,6 +18,7 @@ function PopUpBoxDone(MessageBoxResult Result,ePopUpID _ePopUpID)
 	{
 		if ( _ePopUpID == EPopUpID_EnterIP )
 		{
+			class'OpenMenuCDKeyManager'.default.JoinCompatibilityInfo = "";
 			m_szIP = R6WindowEditBox(m_pEnterIP.m_ClientArea).GetValue();
 			
 			//THIS IS UBI'S ORIGINAL LINE:
@@ -77,16 +78,8 @@ function Manager( UWindowWindow _pCurrentWidget )
 		{
 			if (class'OpenLogger'.static.IsDebugEnabled())
 				class'OpenLogger'.static.Debug("INTERNET SERVER: " $ m_GameService.m_ClientBeacon.PreJoinInfo.bInternetServer, self);
-			// Verify that the server is the same version as the game
-			if ( Root.Console.ViewportOwner.Actor.GetGameVersion() != m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion )
-			{
-				class'OpenLogger'.static.Error("game version mismatch; local:" @ Root.Console.ViewportOwner.Actor.GetGameVersion() @ "server:" @ m_GameService.m_ClientBeacon.PreJoinInfo.szGameVersion, self);
-				eState = EJOINIP_BEACON_FAIL;
-				m_pPleaseWait.HideWindow();
-				m_pError.ShowWindow();
-				R6WindowTextLabel(m_pError.m_ClientArea).Text = Localize("MultiPlayer","PopUp_Error_BadVersion","R6Menu");
-			}
-			else if ( R6Console(Root.console).m_bNonUbiMatchMaking )
+			// Beacon compatibility is advisory; the game handshake decides.
+			if ( R6Console(Root.console).m_bNonUbiMatchMaking )
 			{
 				class'OpenLogger'.static.Debug("joining server without Ubisoft matchmaking", self);
 				_pCurrentWidget.SendMessage( MWM_UBI_JOINIP_SUCCESS );
