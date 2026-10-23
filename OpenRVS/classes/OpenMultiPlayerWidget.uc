@@ -23,6 +23,7 @@ struct AServer
 {
 	var string ServerName;
 	var string IP;
+	var bool bFavorite;
 	var bool Locked;
 	var bool bDedicated;
 	var string GameMode;
@@ -71,6 +72,7 @@ function Created()
 	local OpenServerList existingList;
 
 	super.Created();
+	m_GameService.NativeInitFavorites();//load the existing address-based favorites file
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
 	// Reuse the level's provider across menu rebuilds. Init cancels its old
@@ -128,7 +130,7 @@ function AddServerToList(string sn, string sip, string sm)
 function FinishedServers()
 {
 	bServerSuccess = true;
-	GetGSServers();
+	ResortServerList(m_iLastSortCategory,m_bLastTypeOfSort);
 	if ( bNeedsExtraRefresh )
 	{
 		bNeedsExtraRefresh = false;
@@ -214,12 +216,20 @@ function GetGSServers()
 	szModeCoop = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
 
 	i = 0;
+	j = 0;//visible row index differs from ServerList when filtering
 	while ( i < ServerList.length )
 	{
-		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(i,NewItem));
+		ServerList[i].bFavorite = m_GameService.IsAFavorite(ServerList[i].IP);
+		if ( m_GameService.m_Filters.bFavoritesOnly && !ServerList[i].bFavorite )
+		{
+			i++;
+			continue;
+		}
+		NewItem = R6WindowListServerItem(m_ServerListBox.GetNextItem(j,NewItem));
+		j++;
 		NewItem.Created();
 		NewItem.iMainSvrListIdx = i;
-		NewItem.bFavorite = true;//todo - favorite servers
+		NewItem.bFavorite = ServerList[i].bFavorite;
 		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
 		NewItem.szIPAddr = ServerList[i].IP;
 		if ( ServerList[i].iPing == NO_RESPONSE_PING )
@@ -480,6 +490,8 @@ function ResortServerList(int iCategory, bool _bAscending)
 	m_iLastSortCategory = iCategory;
 	m_bLastTypeOfSort = _bAscending;
 	iListSize = ServerList.length;
+	for ( i = 0; i < iListSize; i++ )
+		ServerList[i].bFavorite = m_GameService.IsAFavorite(ServerList[i].IP);
 	for ( i = 0; i < iListSize - 1; i++ )
 	{
 		for ( j = 0; j < iListSize - 1 - i; j++ )
@@ -488,6 +500,11 @@ function ResortServerList(int iCategory, bool _bAscending)
 			bSwap = false;
 			switch ( iCategory )
 			{
+				case 0://favorite
+					bIntComp = true;
+					iCompare1 = int(ServerList[j].bFavorite);
+					iCompare2 = int(ServerList[j+1].bFavorite);
+					break;
 				case 1://locked
 					sCompare1 = string(ServerList[j].Locked);
 					sCompare2 = string(ServerList[j+1].Locked);
@@ -518,7 +535,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 					iCompare1 = ServerList[j].iNumPlayers;
 					iCompare2 = ServerList[j+1].iNumPlayers;
 					break;
-				default://ping sort; unsupported favorites and PunkBuster categories also sort by ping
+				default://ping sort; unsupported PunkBuster category also sorts by ping
 					bIntComp = true;
 					iCompare1 = ServerList[j].iPing;
 					iCompare2 = ServerList[j+1].iPing;
@@ -538,7 +555,9 @@ function ResortServerList(int iCategory, bool _bAscending)
 				else
 					bSwap =  sCompare1 < sCompare2;
 			}
-			bSwap = ( ( bSwap || ( ServerList[j].iPing == NO_RESPONSE_PING ) ) && ( ServerList[j+1].iPing != NO_RESPONSE_PING ) );//always send servers with no response to the bottom of the list
+			// Favorite ordering takes priority even for servers that have not replied.
+			if ( iCategory != 0 )
+				bSwap = ( ( bSwap || ( ServerList[j].iPing == NO_RESPONSE_PING ) ) && ( ServerList[j+1].iPing != NO_RESPONSE_PING ) );
 			if ( bSwap )
 			{
 				temp = ServerList[j];
@@ -548,6 +567,77 @@ function ResortServerList(int iCategory, bool _bAscending)
 		}
 	}
 	GetGSServers();//forces a rebuild in the menu list items based on our resorted ServerList array
+}
+
+// Internet rows belong to ServerList, not the retired Ubisoft sorted list.
+// Persist their full IP:port through the game's existing favorites storage.
+function AddServerToFavorites()
+{
+	if ( m_ConnectionTab == TAB_Lan_Server )
+		super.AddServerToFavorites();
+	else
+		SetInternetFavorite(true);
+}
+
+function DelServerFromFavorites()
+{
+	if ( m_ConnectionTab == TAB_Lan_Server )
+		super.DelServerFromFavorites();
+	else
+		SetInternetFavorite(false);
+}
+
+function SetInternetFavorite(bool bFavorite)
+{
+	local R6WindowListServerItem Selected;
+	local string Address;
+	local int i;
+
+	if ( m_ServerListBox == None )
+		return;
+	Selected = R6WindowListServerItem(m_ServerListBox.m_SelectedItem);
+	if ( Selected == None || Selected.szIPAddr == "" )
+		return;
+	Address = Selected.szIPAddr;
+	m_GameService.NativeInitFavorites();
+	for ( i = 0; i < m_GameService.m_favoriteServersList.Length; i++ )
+	{
+		if ( m_GameService.m_favoriteServersList[i] == Address )
+		{
+			if ( !bFavorite )
+			{
+				m_GameService.m_favoriteServersList.Remove(i,1);
+				m_GameService.NativeUpdateFavorites();
+			}
+			return;
+		}
+	}
+	if ( bFavorite )
+	{
+		m_GameService.m_favoriteServersList[m_GameService.m_favoriteServersList.Length] = Address;
+		m_GameService.NativeUpdateFavorites();
+	}
+}
+
+// Keep context-menu actions off the unrelated Ubisoft server indices.
+function UpdateFavorites()
+{
+	local string Action;
+
+	if ( m_ConnectionTab == TAB_Lan_Server )
+	{
+		super.UpdateFavorites();
+		return;
+	}
+	Action = m_pRightClickMenu.GetValue();
+	if ( Action == Localize("MultiPlayer","RightClick_AddFav","R6Menu") )
+		AddServerToFavorites();
+	else if ( Action == Localize("MultiPlayer","RightClick_SubFav","R6Menu") )
+		DelServerFromFavorites();
+	else if ( Action == Localize("MultiPlayer","RightClick_Refr","R6Menu") )
+		Refresh(false);
+
+	ResortServerList(m_iLastSortCategory,m_bLastTypeOfSort);
 }
 
 // ManageTabSelection() performs various actions when a user changes the tab in
@@ -572,6 +662,7 @@ function ManageTabSelection(INT _MPTabChoiceID)
 			SaveConfig();
 			break;
 		case MultiPlayerTabID.TAB_Internet_Server:
+			m_GameService.NativeInitFavorites();//pick up changes made through the LAN browser
 			m_ConnectionTab = TAB_Internet_Server;
 			m_LoginSuccessAction = eLSAct_InternetTab;
 			m_pLoginWindow.StartLogInProcedure(self);
