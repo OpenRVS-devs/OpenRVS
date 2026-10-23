@@ -17,8 +17,7 @@ static function int Split(string input, string sep, out array<string> fields)
 		}
 		else//final field
 		{
-			if (Len(input) > 0)
-				fields[fields.Length] = input;
+			fields[fields.Length] = input;
 			done = true;
 		}
 	}
@@ -29,7 +28,9 @@ static function int Split(string input, string sep, out array<string> fields)
 // Replaces '"text"' with 'text'.
 static function string StripQuotes(string s)
 {
-	return Mid(s, 1, Len(s)-2);
+	if ( Len(s) >= 2 && Left(s, 1) == Chr(34) && Right(s, 1) == Chr(34) )
+		return Mid(s, 1, Len(s)-2);
+	return s;
 }
 
 // replaces "replace" with "with" in "Text"

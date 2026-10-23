@@ -191,6 +191,12 @@ function bool SendRequest(string url)
 		class'OpenLogger'.static.Debug("callbackName should not be empty", self);
 
 	parsed = parseHttpUrl(url);
+	if ( parsed.Host == "" || parsed.Port < 1 || parsed.Port > 65535 )
+	{
+		class'OpenLogger'.static.Error("invalid HTTP URL", self);
+		triggerCallbacks();
+		return false;
+	}
 	Host = parsed.Host;
 	Port = parsed.Port;
 	Path = parsed.Path;
@@ -278,6 +284,11 @@ private static function ParsedURL parseHttpUrl(string url)
 	//after: ["http:", "", "www.example.com[:80]", "servers"]
 	numParts = class'OpenString'.static.Split(url, "/", urlParts);
 
+	if ( numParts < 3 )
+		return parsed;
+	if ( urlParts[2] == "" )
+		return parsed;
+
 	// Parse host and port.
 	if (InStr(urlParts[2], ":") == -1)//url does not contain port
 	{
@@ -313,7 +324,10 @@ private static function string splitLines(string chunk, string carry, out array<
 	i = InStr(chunk, Chr(10));
 	while (i != -1)
 	{
-		lines[lines.Length] = carry $ Left(chunk, i);
+		carry = carry $ Left(chunk, i);
+		if ( Right(carry, 1) == Chr(13) )
+			carry = Left(carry, Len(carry)-1);
+		lines[lines.Length] = carry;
 		carry = "";
 		chunk = Mid(chunk, i+1);
 		i = InStr(chunk, Chr(10));
@@ -369,6 +383,8 @@ private static function HttpResponse parseHttpResponse(array<string> chunks)
 	carry = splitLines(Mid(header, headerEnd+4), carry, lines);//4=bytes of CR LF CR LF
 	for (i = i+1; i < chunks.Length; i++)
 		carry = splitLines(chunks[i], carry, lines);
+	if ( Right(carry, 1) == Chr(13) )
+		carry = Left(carry, Len(carry)-1);
 	if (carry != "")//body did not end with a line break
 		lines[lines.Length] = carry;
 	resp.Lines = lines;
