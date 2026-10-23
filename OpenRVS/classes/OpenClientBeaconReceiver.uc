@@ -8,8 +8,7 @@ var OpenMultiPlayerWidget Widget;
 function QuerySingleServer(OpenMultiPlayerWidget OMPW, coerce string sIP, coerce int sPort)
 {
 	local IpAddr Addr;
-	if ( Widget == none )//get a reference to the widget to send info back to
-		Widget = OMPW;
+	Widget = OMPW;//always target the current widget
 	StringToIpAddr(sIP,Addr);//turn the string to an IP
 	Addr.Port = sPort;
 	BroadcastBeacon(Addr);
@@ -54,8 +53,10 @@ event ReceivedText(IpAddr Addr, string Text)
 			sSvrName = ParseOption(szThirdWord,SvrNameMarker);
 			sModName = ParseOption(szThirdWord,ModNameMarker);//1.3 - sModName string added to function in MP menu
 			bSvrLocked = bool(ParseOption(szThirdWord,LockedMarker));//1.5 - locked info received here
-			Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked);//send received info back to server list
-			class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
+			if ( Widget != None )
+				Widget.ReceiveServerInfo(IpAddrToString(Addr),sNumP,sMaxP,sGMode,sMapName,sSvrName,sModName,bSvrLocked);//send received info back to server list
+			if (class'OpenLogger'.static.IsDebugEnabled())
+				class'OpenLogger'.static.Debug("Server " $ sSvrName $ " at " $ IpAddrToString(Addr) $ " is playing map " $ sMapName $ " in game mode type " $ sGMode $ ". Players: " $ sNumP $ "/" $ sMaxP, self);
 		}
 	}
 }

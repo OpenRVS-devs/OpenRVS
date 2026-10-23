@@ -8,6 +8,17 @@
 
 class OpenMultiPlayerWidget extends R6MenuMultiPlayerWidget;
 
+// Minimum time between full server listbox rebuilds, in seconds. Server info
+// arrives one response at a time; without this, ReceiveServerInfo() rebuilds
+// the whole list once per server.
+const LIST_REBUILD_INTERVAL = 0.25;
+
+// A server that never answers a beacon query would otherwise stay marked as
+// in-flight forever and never be queried again. After this many seconds the
+// pending query is treated as lost and the server becomes eligible again.
+const QUERY_TIMEOUT = 10.0;
+const NO_RESPONSE_PING = -1;
+
 struct AServer
 {
 	var string ServerName;
@@ -19,15 +30,18 @@ struct AServer
 	var string szMap;//1.5 - map name
 	var bool bWrongVersion;//1.5 - running same expansion mod - for future use? - needs to be inverted so only true value will trigger changing the menu
 	var int iPing;//1.5 - ping
+	var bool bAdversarial;//1.7 - GameMode classification, computed once when the server is added
+	var bool bQueryPending;//1.7 - a beacon query is in flight for this server
+	var float fQuerySent;//1.7 - level time (seconds) the pending query was sent
 };
 var array<AServer> ServerList;//1.3 - not config - config is now in openserverlist, which handles loading the backup list
 var config string ServerURL;//0.8 server list URL to load
 var config string ServerListURL;//0.8 server list file to load
 var bool bServerSuccess;//0.8 got list of servers from online provider
-var array<string> OpenQueries;//1.5 keep track of servers we've queried
-var OpenTimer Timer;//1.5 ping update
 var OpenServerList OS;//moved here from local - because needed in tab switching function
 var bool bNeedsExtraRefresh;//if going from lan tab to internet, we need an extra refresh forced after the server list is fetched
+var bool bListDirty;//1.7 - a server response arrived; rebuild the listbox on the next Paint()
+var float fLastListRebuild;//1.7 - time of the last rebuild, used to coalesce response bursts
 
 // QueryReceivedStartPreJoin() (aka PREJOIN) fires when a server query has
 // completed successfully. It is called by the SendMessage() function. In the
@@ -48,11 +62,24 @@ function QueryReceivedStartPreJoin ()
 // Added in 0.8 - made this function load saved URL for server list
 function Created()
 {
+	local Actor listOwner;
+	local OpenServerList existingList;
+
 	super.Created();
 	m_GameService.m_bAutoLISave = false;//0.9 freeze fix - not sure if this does anything but seems to help steam users
 	LoadConfig("openrvs.ini");//0.8 - see if we need alternate list source
-	OS = Root.Console.ViewportOwner.Actor.spawn(class'OpenServerList');//get the server list over http
-	OS.Init(self,ServerURL,ServerListURL);//0.8 made this load saved config vars in openrvs.ini
+	// Reuse the level's provider across menu rebuilds. Init cancels its old
+	// request and replaces the reference to the previous widget.
+	listOwner = Root.Console.ViewportOwner.Actor;
+	foreach listOwner.AllActors(class'OpenServerList', existingList)
+	{
+		OS = existingList;
+		break;
+	}
+	if ( OS == None )
+		OS = listOwner.Spawn(class'OpenServerList');
+	if ( OS != None )
+		OS.Init(self,ServerURL,ServerListURL);
 }
 
 //couldn't get server list
@@ -71,6 +98,7 @@ function NoServerList()
 function ClearServerList()
 {
 	ServerList.remove(0,ServerList.length);
+	bListDirty = false;//1.7 - nothing left to rebuild
 }
 
 // Adds a server to the list.
@@ -85,7 +113,8 @@ function AddServerToList(string sn, string sip, string sm)
 	Temp.ServerName = sn;
 	Temp.IP = sip;
 	Temp.GameMode = sm;
-	Temp.iPing = 1000;//1.5 - don't let iPing initialize with null value of 0 - for sorting. If server responds, this value will be set to actual ping
+	Temp.iPing = NO_RESPONSE_PING;
+	Temp.bAdversarial = ( InStr(caps(sm),"ADV") != -1 );//1.7 - cache the classification; GameMode never changes after this
 	ServerList[ServerList.length] = Temp;
 }
 
@@ -100,6 +129,16 @@ function FinishedServers()
 		bNeedsExtraRefresh = false;
 		Refresh(false);
 	}
+}
+
+// Paint() is called every frame while this widget is visible. If new server
+// info arrived since the last rebuild, rebuild here at most once per
+// LIST_REBUILD_INTERVAL instead of once per response.
+function Paint(Canvas C, float X, float Y)
+{
+	if ( bListDirty && ( GetLevel().TimeSeconds - fLastListRebuild ) >= LIST_REBUILD_INTERVAL )
+		GetGSServers();
+	super.Paint(C,X,Y);
 }
 
 // GetGSServers() retrieves the current list of servers from the GameService.
@@ -122,6 +161,10 @@ function GetGSServers()
 	local int iNbPages;
 	local int iStartingIndex,iEndIndex;
 	local R6ServerList.stGameServer _stGameServer;
+	local string szModeAdv,szModeCoop;//1.7 - Localize once per rebuild, not once per item
+
+	bListDirty = false;//1.7 - this rebuild satisfies any pending request
+	fLastListRebuild = GetLevel().TimeSeconds;
 
 	InitServerList();//needed here to prevent big accessed nones!
 	console = R6Console(Root.Console);
@@ -162,6 +205,9 @@ function GetGSServers()
 	//if ( iEndIndex > iNumServersDisplay )
 	//	iEndIndex = iNumServersDisplay;
 
+	szModeAdv = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
+	szModeCoop = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
+
 	i = 0;
 	while ( i < ServerList.length )
 	{
@@ -171,7 +217,10 @@ function GetGSServers()
 		NewItem.bFavorite = true;//todo - favorite servers
 		NewItem.bSameVersion = !ServerList[i].bWrongVersion;//true;//1.5 change - bWrongVersion inits as false but can be set true in later check
 		NewItem.szIPAddr = ServerList[i].IP;
-		NewItem.iPing = ServerList[i].iPing;
+		if ( ServerList[i].iPing == NO_RESPONSE_PING )
+			NewItem.iPing = m_ServerListBox.m_iPingTimeOut;
+		else
+			NewItem.iPing = ServerList[i].iPing;
 		NewItem.szName = ServerList[i].ServerName;
 		NewItem.szMap = ServerList[i].szMap;//"";//1.5 change
 		NewItem.iMaxPlayers = ServerList[i].iMaxPlayers;
@@ -181,10 +230,10 @@ function GetGSServers()
 		NewItem.bPunkBuster = false;
 		//Root.GetMapNameLocalisation( NewItem.szMap, NewItem.szMap, true);
 		NewItem.szGameType = ServerList[i].szGameType;//"";//1.5 change
-		if ( InStr(caps(ServerList[i].GameMode),"ADV") != -1 )
-			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Adversarial","R6Menu");
+		if ( ServerList[i].bAdversarial )
+			NewItem.szGameMode = szModeAdv;
 		else
-			NewItem.szGameMode = Localize("MultiPlayer","GameMode_Cooperative","R6Menu");
+			NewItem.szGameMode = szModeCoop;
 		// If selected server is still in list, reset this item
 		// to be the selcted server.	By default the selected server will
 		// be the first server in the list.
@@ -299,8 +348,8 @@ function ShowWindow()
 // 0.8: should let refresh button also update player counts
 function Refresh(bool bActivatedByUser)
 {
-	local bool bFound;//1.5 - prevent multiple open queries
-	local int i,j;
+	local int j;
+	local float now;
 
 	super.Refresh(bActivatedByUser);//call super first
 
@@ -312,37 +361,26 @@ function Refresh(bool bActivatedByUser)
 	if ( ( m_LanServers.m_ClientBeacon == none ) || ( !m_LanServers.m_ClientBeacon.IsA('OpenClientBeaconReceiver') ) )
 		return;
 
-	//1.5 - if initiated by user, clear the list of current queries and start fresh
-	if ( bActivatedByUser )
-		OpenQueries.remove(0,OpenQueries.length);
+	now = GetLevel().TimeSeconds;
 	//0.9: get each server in the list, then query for more info
 	//1.5 - query ServerList instead
+	//1.7 - pending queries are tracked on each server entry, so this loop is
+	//linear. A query that never gets a response expires after QUERY_TIMEOUT
+	//and is retried on a later refresh instead of being skipped forever.
+	//In-flight queries are kept even on an explicit refresh: re-sending would
+	//make a late response impossible to attribute to one of the two queries,
+	//which would skew the measured ping.
 	j = 0;
 	while ( j < ServerList.length )
 	{
-		i = 0;
-		bFound = false;
-		ServerList[j].iPing = 1000;//set to 1000 so if server doesn't respond this time, it will sort to the bottom of the list
-		//1.5 - only one open query to a server at a time
-		while ( i < OpenQueries.length )
+		//1.5 - only one open query to a server at a time. now < fQuerySent
+		//means the level clock restarted, so the pending query is stale too.
+		if ( !ServerList[j].bQueryPending || now < ServerList[j].fQuerySent
+			|| ( now - ServerList[j].fQuerySent ) >= QUERY_TIMEOUT )
 		{
-			if ( OpenQueries[i] == ServerList[j].IP )//aleady have query open
-			{
-				bFound = true;
-				break;
-			}
-			i++;
-		}
-		if ( !bFound )
-		{
-			OpenQueries[OpenQueries.length] = ServerList[j].IP;
-			//1.5 - get rough ping
-			if ( Timer == none )
-			{
-				Timer = new class'OpenTimer';
-				Timer.ClockSource = GetLevel();
-			}
-			Timer.StartTimer(ServerList[j].IP);
+			ServerList[j].iPing = NO_RESPONSE_PING;
+			ServerList[j].bQueryPending = true;
+			ServerList[j].fQuerySent = now;//1.5 - start of the rough ping measurement
 			OpenClientBeaconReceiver(m_GameService.m_ClientBeacon).QuerySingleServer(self,
 				Left(ServerList[j].IP,InStr(ServerList[j].IP,":")),
 				int(Mid(ServerList[j].IP,InStr(ServerList[j].IP,":")+1))+1000);
@@ -358,20 +396,12 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 {
 	local R6WindowListServerItem CurServer;
 	local int i,iTime;
+	local LevelInfo pLevel;
 
 	//1.5
 	//modify the servers array rather than the list items
 	//then rebuild list items with GetGSServers()
-	i = 0;
-	while ( i < OpenQueries.length )
-	{
-		if ( OpenQueries[i] == sIP )//close open query
-		{
-			OpenQueries.remove(i,1);
-			break;
-		}
-		i++;
-	}
+	pLevel = GetLevel();
 	i = 0;
 	while ( i < ServerList.length )
 	{
@@ -381,16 +411,25 @@ function ReceiveServerInfo(string sIP,coerce int iNumP,coerce int iMaxP,string s
 			ServerList[i].Locked = bSvrLocked;
 			ServerList[i].iMaxPlayers = iMaxP;
 			ServerList[i].iNumPlayers = iNumP;
-			ServerList[i].szGameType = GetLevel().GetGameNameLocalization(sGMode);
+			ServerList[i].szGameType = pLevel.GetGameNameLocalization(sGMode);
 			ServerList[i].szMap = sMapName;
 			ServerList[i].bWrongVersion = ( caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_szKeyWord) != caps(sModName) );
-			iTime = Timer.EndTimer(sIP);
-			if ( iTime != -1 )
-				ServerList[i].iPing = iTime / 2;//divide by two for single-trip time - consistent with how Ubi used to measure
+			//1.7 - the query plus its start time live on the server entry, so
+			//closing the query needs no lookup in a separate bookkeeping array
+			if ( ServerList[i].bQueryPending )
+			{
+				ServerList[i].bQueryPending = false;
+				iTime = int(pLevel.TimeSeconds*1000) - int(ServerList[i].fQuerySent*1000);
+				if ( iTime >= 0 )
+					ServerList[i].iPing = iTime / 2;//divide by two for single-trip time - consistent with how Ubi used to measure
+			}
 		}
 		i++;
 	}
-	GetGSServers();
+	//1.7 - do not rebuild the whole listbox for every response. Paint() will
+	//do one rebuild for the whole burst, at most once per LIST_REBUILD_INTERVAL.
+	if ( m_ConnectionTab == TAB_Internet_Server )
+		bListDirty = true;
 }
 
 // InitServerList() creates a window for the server list. It is called by
@@ -488,7 +527,7 @@ function ResortServerList(int iCategory, bool _bAscending)
 				else
 					bSwap =  sCompare1 < sCompare2;
 			}
-			bSwap = ( ( bSwap || ( ServerList[j].iPing == 1000 ) ) && ( ServerList[j+1].iPing != 1000 ) );//always send servers with no response to the bottom of the list
+			bSwap = ( ( bSwap || ( ServerList[j].iPing == NO_RESPONSE_PING ) ) && ( ServerList[j+1].iPing != NO_RESPONSE_PING ) );//always send servers with no response to the bottom of the list
 			if ( bSwap )
 			{
 				temp = ServerList[j];

@@ -1,6 +1,10 @@
+.dockerhome/
+.wine-rvs/
 SDK156/
 SDK160/
 SDK16H/
+build/
+sdk/
 sounds/
 staticmeshes/
 system/

@@ -23,7 +23,8 @@ struct Timing
 
 const ERR_VALUE = -1;
 
-// Timings stores all timers in the class object
+// Timings stores all timers in the class object. It is kept sorted by ID so
+// that lookups are binary searches rather than linear scans.
 var private array<Timing> Timings;
 var LevelInfo ClockSource;
 
@@ -31,20 +32,33 @@ var LevelInfo ClockSource;
 function StartTimer(string id)
 {
 	local Timing t;
-	local LevelInfo now;
 	local int i;
+	local int lo,hi,mid;
 
-	// Prevent writes for duplicate timings.
-	for ( i=0; i<Timings.Length; i++ )
+	// Binary search for the insert position. Duplicate IDs keep their
+	// existing start time, so stop if the ID is already present.
+	lo = 0;
+	hi = Timings.Length;
+	while ( lo < hi )
 	{
-		if ( Timings[i].ID == id )
-			return;
+		mid = (lo + hi) / 2;
+		if ( Timings[mid].ID == id )
+			return;// Prevent writes for duplicate timings.
+		if ( Timings[mid].ID < id )
+			lo = mid + 1;
+		else
+			hi = mid;
 	}
 
 	t.ID = id;
 	t.StartTime = int(ClockSource.TimeSeconds*1000);
-	Timings[Timings.Length] = t;//Save this timing entry.
-	class'OpenLogger'.static.Debug("started timer with id" @ t.ID @ "at time" @ t.StartTime, self);
+	// Insert at lo to keep Timings sorted by ID.
+	Timings.Length = Timings.Length + 1;
+	for ( i=Timings.Length-1; i>lo; i-- )
+		Timings[i] = Timings[i-1];
+	Timings[lo] = t;//Save this timing entry.
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("started timer with id" @ t.ID @ "at time" @ t.StartTime, self);
 }
 
 // Stop the clock and return the elapsed duration in milliseconds
@@ -54,27 +68,38 @@ function int EndTimer(string id)
 	local int i;
 	local int endTime;
 	local bool found;
+	local int lo,hi,mid;
 
 	endTime = int(ClockSource.TimeSeconds*1000);
 
 	// Find our timing ID
-	for ( i=0; i<Timings.Length; i++ )
+	lo = 0;
+	hi = Timings.Length;
+	while ( lo < hi )
 	{
-		if ( Timings[i].ID == id )
+		mid = (lo + hi) / 2;
+		if ( Timings[mid].ID == id )
 		{
 			found = true;
-			t = Timings[i];
+			i = mid;
+			t = Timings[mid];
 			break;
 		}
+		if ( Timings[mid].ID < id )
+			lo = mid + 1;
+		else
+			hi = mid;
 	}
 
 	if (!found)
 	{
-		class'OpenLogger'.static.Debug("timing not found with id=" $ id, self);
+		if (class'OpenLogger'.static.IsDebugEnabled())
+			class'OpenLogger'.static.Debug("timing not found with id=" $ id, self);
 		return ERR_VALUE;
 	}
 
-	class'OpenLogger'.static.Debug("timing '" $ t.ID $ "' had start time" @ t.StartTime $ ", end time" @ endTime $ ", and duration" @ endTime - t.StartTime, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("timing '" $ t.ID $ "' had start time" @ t.StartTime $ ", end time" @ endTime $ ", and duration" @ endTime - t.StartTime, self);
 	Timings.Remove(i, 1);//We are done with this timing entry.
 	return endTime - t.StartTime;
 }
@@ -82,5 +107,6 @@ function int EndTimer(string id)
 // Write the current time (in ms since level start) to the log file.
 function LogTime()
 {
-	class'OpenLogger'.static.Debug("the time is now" @ int(ClockSource.TimeSeconds*1000), self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("the time is now" @ int(ClockSource.TimeSeconds*1000), self);
 }

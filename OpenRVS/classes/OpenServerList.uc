@@ -33,6 +33,7 @@ var string FileName;
 // Starts OpenServerList and send an HTTP request to the server list provider.
 function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F)
 {
+	CancelRequest();
 	M = Widget;
 	if ( W != "" )
 		WebAddress = W;
@@ -43,10 +44,33 @@ function Init(OpenMultiPlayerWidget Widget, optional string W, optional string F
 	else
 		FileName = "servers";
 
+	// Only the latest request may update the current widget.
 	httpc = Spawn(class'OpenHTTPClient');
+	if ( httpc == None )
+	{
+		SendServersUpstream(GetFallbackServers());
+		return;
+	}
 	httpc.CallbackName = "server_list";
 	httpc.ServerListCallbackProvider = self;
 	httpc.SendRequest("http://" $ WebAddress $ "/" $ FileName);
+}
+
+function CancelRequest()
+{
+	local OpenHTTPClient previous;
+
+	previous = httpc;
+	httpc = None;
+	if ( previous != None )
+		previous.CancelRequest();
+}
+
+event Destroyed()
+{
+	CancelRequest();
+	M = None;
+	super.Destroyed();
 }
 
 // Receives and detects type for an HTTP response from the server list provider.
@@ -55,10 +79,10 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 {
 	local array<string> lines;
 
-	httpc = none;//done with HTTP client
+	httpc = none;//done with HTTP client; it destroys itself once this callback returns
 
 	//Check for errors.
-	if (resp.Code != 200)
+	if (resp.Code != 200 || resp.Lines.Length == 0)
 	{
 		class'OpenLogger'.static.Error("failed to retrieve servers over http", self);
 		SendServersUpstream(GetFallbackServers());
@@ -66,7 +90,7 @@ function ParseServers(OpenHTTPClient.HttpResponse resp)
 	}
 
 	class'OpenLogger'.static.Info("loading servers from Internet", self);
-	class'OpenString'.static.Split(resp.Body, Chr(10), lines);
+	lines = resp.Lines;//the client already split the body into lines
 	class'OpenLogger'.static.Info("parsing" @ lines.Length @ "server lines", self);
 
 	// Determine response type.
@@ -94,32 +118,28 @@ function array<AServer> ParseServersINI(array<string> lines)
 	local array<string> kvpair;//one key=value parameter pair ["a", "b"]
 	local int numFields, numSubfields;
 	local int i, j;
-	local AServer srv;
+	local AServer srv, emptyServer;
 	local array<AServer> servers;
 
-	class'OpenLogger'.static.Debug("using csv parser", self);
+	class'OpenLogger'.static.Debug("using ini parser", self);
 	lines.Remove(0, 1);//skips header line (specific to INI parser)
 
-	// Convert each line to CSV K=V format (i.e. "a=b,c=d,e=f")
 	for (i=0; i<lines.Length; i++)
 	{
+		srv = emptyServer;
 		line = lines[i];
-		line = Mid(line, 12);//trim up to "ServerName="
-		line = Left(line, Len(line)-1);//remove )
-		lines[i] = line;//overwrite
-	}
-
-	for (i=0; i<lines.Length; i++)
-	{
-		numFields = class'OpenString'.static.Split(lines[i], ",", fields);//fields is now a list of k=v
+		if ( Left(line, 12) != "ServerList=(" || Right(line, 1) != ")" )
+			continue;
+		line = Mid(line, 12, Len(line)-13);
+		numFields = class'OpenString'.static.Split(line, ",", fields);
 		for (j=0; j<numFields; j++)
 		{
 			numSubfields = class'OpenString'.static.Split(fields[j], "=", kvpair);//kvpair is one k=v set
 			if (numSubfields != 2)
 			{
-				//occurs when someone has "=" in their server name
-				//we simply drop anything after (and including) the first "="
+				//Malformed fields must not index an incomplete key/value pair.
 				class'OpenLogger'.static.Warning("failed to parse k=v in ServerListSuccess:" @ fields[j], self);
+				continue;
 			}
 			switch (kvpair[0])//text before "="
 			{
@@ -194,6 +214,8 @@ function SendServersUpstream(array<AServer> servers)
 	local int i;
 
 	class'OpenLogger'.static.Info("loading" @ servers.Length @ "parsed servers", self);
+	if ( M == None )
+		return;
 	M.ClearServerList();
 	for (i=0; i<servers.Length; i++)
 	{

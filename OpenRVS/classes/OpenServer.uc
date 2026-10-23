@@ -9,6 +9,15 @@ class OpenServer extends Actor config(BanList);
 
 var bool bLogged, bCracked;
 
+// Walk the controller list when players join or leave (NumPlayers and
+// NumSpectators change), and a few times per second so pawns that respawn
+// between rounds still get flagged. This used to happen on every frame.
+const PAWN_SCAN_INTERVAL = 0.25;
+
+var private int lastNumPlayers;
+var private int lastNumSpectators;
+var private float nextPawnScan;
+
 //log to server to make sure it's running
 event PreBeginPlay()
 {
@@ -26,28 +35,72 @@ event PreBeginPlay()
 //this server with the OpenRVS registry.
 event PostNetBeginPlay()
 {
+	local OpenBeacon beacon;
+	local R6AbstractGameInfo gameInfo;
+
 	super.PostNetBeginPlay();
 
 	//send a UDP beacon to the registry
-	OpenBeacon(R6AbstractGameInfo(Level.Game).m_UdpBeacon).RegisterServer();
+	gameInfo = R6AbstractGameInfo(Level.Game);
+	if ( gameInfo != None )
+		beacon = OpenBeacon(gameInfo.m_UdpBeacon);
+	if ( beacon != None )
+		beacon.RegisterServer();
 }
 
 //find a player who hasn't been validated
 //and fix it before the server attempts to send the info to Ubi master server
 function Tick(float delta)
 {
-	local Controller C;
-	local R6PlayerController P;
-	local R6AbstractGameManager A;
-	local R6GSServers G;
-	local R6GameInfo I;
-	local string s;
-	local Pawn Pawn;
+	local bool bScanControllers;
+
 	super.Tick(delta);
+
+	// A join or leave changes one of these counters, so scan immediately
+	// instead of waiting for the next pawn pass.
+	bScanControllers = false;
+	if ( ( Level.Game.NumPlayers != lastNumPlayers ) || ( Level.Game.NumSpectators != lastNumSpectators ) )
+	{
+		lastNumPlayers = Level.Game.NumPlayers;
+		lastNumSpectators = Level.Game.NumSpectators;
+		bScanControllers = true;
+	}
+	// Nobody is connected, so there are no pawns to replicate and no CD keys
+	// to validate. The count check above will start the scans again on join.
+	if ( ( Level.Game.NumPlayers == 0 ) && ( Level.Game.NumSpectators == 0 ) )
+		return;
+	if ( Level.TimeSeconds >= nextPawnScan )
+	{
+		nextPawnScan = Level.TimeSeconds + PAWN_SCAN_INTERVAL;
+		bScanControllers = true;
+	}
+	if ( !bScanControllers )
+		return;
+
+	ScanControllers();
+}
+
+//find unvalidated players and flag living pawns as always relevant
+function ScanControllers()
+{
+	local Controller C, NextController;
+	local R6PlayerController P;
+	local Pawn Pawn;
+
 	C = Level.ControllerList;
 	while ( C != none )
 	{
+		NextController = C.NextController;
 		P = R6PlayerController(C);
+		if ( P != None && HandleBans(P) )
+		{
+			class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address", self);
+			P.ClientMessage("Your IP address is banned on this server");
+			P.ClientKickedOut();
+			P.SpecialDestroy();
+			C = NextController;
+			continue;
+		}
 		//doesn't have valid cd key
 		if ( ( P != none ) && ( P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus != ECDKEYST_PLAYER_VALID ) )
 		{
@@ -64,13 +117,7 @@ function Tick(float delta)
 			P.m_stPlayerVerCDKeyStatus.m_iCDKeyReqID = 1;
 			P.m_stPlayerVerCDKeyStatus.m_bCDKeyValSecondTry = false;
 			P.m_stPlayerVerCDKeyStatus.m_eCDKeyStatus = ECDKEYST_PLAYER_VALID;
-			if ( HandleBans(P) )//PLAYER IS BANNED VIA IP ADDRESS
-			{
-				class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' is banned via IP address", self);
-				P.ClientMessage("Your IP address is banned on this server");
-				P.ClientKickedOut();
-				P.SpecialDestroy();
-			}
+
 		}
 		//1.2:
 		//set each existing pawn as always relevant
@@ -83,7 +130,7 @@ function Tick(float delta)
 		{
 			Pawn.bAlwaysRelevant = true;
 		}
-		C = C.NextController;
+		C = NextController;
 	}
 }
 
@@ -95,7 +142,7 @@ function Timer()
 	Level.Game.AccessControl.LoadConfig();
 }
 
-//should be called once per controller per map
+//Check each player independently of CD-key validation on every controller scan
 //set the globalID to the IP address
 //so the IP will get banned instead of obsolete ID
 function bool HandleBans(R6PlayerController P)
@@ -103,20 +150,23 @@ function bool HandleBans(R6PlayerController P)
 	local string s;
 	local int i;
 	s = P.GetPlayerNetworkAddress();
-	P.m_szGlobalID = left(s,InStr(s,":"));
+	if ( InStr(s, ":") != -1 )
+		s = Left(s, InStr(s, ":"));
+	if ( P.m_szGlobalID != s )
+		class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is:" @ s, self);
+	P.m_szGlobalID = s;
 	//0.6 update:
 	//log each player's IP address
 	//TO DO:
 	//log the time of joining as well
-	class'OpenLogger'.static.Info("Player '" $ P.PlayerReplicationInfo.PlayerName $ "' joining server; IP address is:" @ left(s,InStr(s,":")), self);
-	class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("PLAYER ID IS: " $ P.m_szGlobalID, self);
 	while ( i < Level.Game.AccessControl.Banned.length )
 	{
-		if ( Level.Game.AccessControl.Banned[i] ~= Left(P.m_szGlobalID,Len(Level.Game.AccessControl.Banned[i])) )
+		if ( Level.Game.AccessControl.Banned[i] != "" && Level.Game.AccessControl.Banned[i] == P.m_szGlobalID )
 			return true;
 		i++;
 	}
-	class'OpenLogger'.static.Info("PLAYER NOT BANNED", self);
 	return false;
 }
 

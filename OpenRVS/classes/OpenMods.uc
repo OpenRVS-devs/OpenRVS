@@ -7,9 +7,7 @@ class OpenMods extends R6MenuOptionsMODS config(openrvs);//1.4 added config(open
 
 //v1.4
 var config string ForceStartMod;
-var int FOV;
-var string NewCheatManagerClass;
-var OpenFOV OpenFOV;
+var private bool bScannedMods;//.mod files are only read once per widget
 
 //cycles through all *.mod files in Mods folder
 //and unlocks them for use
@@ -20,30 +18,35 @@ function SetMenuMODS()
 	local R6ModMgr pModManager;
 	local R6Mod aMod;
 	local int iFiles,i2,j;
-	local string szIniFilename,s;
-	local class<R6CheatManager> CheatClass;//1.4
-	local class<R6PlayerController> CustomPC;//1.4
+	local string szIniFilename;
 	local bool bFound;
 	pModManager = class'Actor'.static.GetModMgr();
-	pFileManager = new(none) class'R6FileManager';
-	iFiles = pFileManager.GetNbFile("..\\Mods\\","mod");
-	for ( i2 = 0; i2 < iFiles; i2++ )
+	// Scan the Mods directory and read each .mod file only once. This ran
+	// every time the Mods page was initialized, even though the entries it
+	// adds are kept in the mod manager.
+	if ( !bScannedMods )
 	{
-		pFileManager.GetFileName(i2,szIniFilename);
-		if ( szIniFilename != "" )
+		bScannedMods = true;
+		pFileManager = new(none) class'R6FileManager';
+		iFiles = pFileManager.GetNbFile("..\\Mods\\","mod");
+		for ( i2 = 0; i2 < iFiles; i2++ )
 		{
-			aMod = new(none) class'Engine.R6Mod';
-			aMod.Init(szIniFilename);
-			j = 0;
-			bFound = false;
-			while ( j < pModManager.GetNbMods() )
+			pFileManager.GetFileName(i2,szIniFilename);
+			if ( szIniFilename != "" )
 			{
-				if ( pModManager.m_aMods[j].m_szKeyWord == aMod.m_szKeyWord )
-				bFound = true;
-				j++;
+				aMod = new(none) class'Engine.R6Mod';
+				aMod.Init(szIniFilename);
+				j = 0;
+				bFound = false;
+				while ( j < pModManager.GetNbMods() )
+				{
+					if ( pModManager.m_aMods[j].m_szKeyWord == aMod.m_szKeyWord )
+					bFound = true;
+					j++;
+				}
+				if ( !bFound )
+				pModManager.m_aMods[pModManager.m_aMods.length] = aMod;
 			}
-			if ( !bFound )
-			pModManager.m_aMods[pModManager.m_aMods.length] = aMod;
 		}
 	}
 	super.SetMenuMODS();
@@ -65,48 +68,9 @@ function SetMenuMODS()
 		//R6GSServers(class'Actor'.static.GetGameManager().GetGameMgrGameService()).InitializeMod();
 	}
 	//1.4
-	//this section duplicated in OpenMenuIntelWidget
-	OpenFOV = new class'OpenFOV';
-	FOV = OpenFOV.GetFOV();
-	NewCheatManagerClass = OpenFOV.GetCMClass();
-	OpenFOV = none;
-	if ( FOV != 0 )
-	{
-		FOV = clamp(FOV,65,140);
-		class'R6PlayerController'.default.DefaultFOV = FOV;
-		class'R6PlayerController'.default.DesiredFOV = FOV;
-	}
-	if ( NewCheatManagerClass == "" )
-		CheatClass = class'OpenCheat';
-	else
-	{
-		CheatClass = class<R6CheatManager>(DynamicLoadObject(NewCheatManagerClass,class'Class'));
-		if ( CheatClass == none )
-			CheatClass = class'OpenCheat';
-	}
-	class'OpenLogger'.static.Info("experimental SP manager set to:" @ CheatClass, self);
-
-	class'R6PlayerController'.default.CheatClass = CheatClass;
-	s = caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_PlayerCtrlToSpawn);
-	if ( ( s != "" ) && ( InStr(s,"R6ENGINE.") == -1 ) )//mod has custom pc
-	{
-		CustomPC = class<R6PlayerController>(DynamicLoadObject(class'Actor'.static.GetModMgr().m_pCurrentMod.m_PlayerCtrlToSpawn,class'Class'));
-		if ( CustomPC != none )
-		{
-			CustomPC.default.CheatClass = CheatClass;
-			class'OpenLogger'.static.Debug("OpenRVS experimental SP manager set for: " $ CustomPC, self);
-			if ( FOV != 0 )
-			{
-				FOV = clamp(FOV,65,140);
-				CustomPC.default.DefaultFOV = FOV;
-				CustomPC.default.DesiredFOV = FOV;
-			}
-		}
-	}
-	//FP WEAP FOV FIX
-	s = caps(class'Actor'.static.GetModMgr().m_pCurrentMod.m_GlobalHUDToSpawn);
-	if ( ( s == "" ) || ( s == "R6GAME.R6HUD" ) )
-		class'Actor'.static.GetModMgr().m_pCurrentMod.m_GlobalHUDToSpawn = "OpenRVS.OpenHUD";
+	// Applies the FOV fix and custom cheat manager, shared with
+	// OpenMenuIntelWidget.
+	class'OpenFOV'.static.ApplyClassDefaults(self);
 }
 
 //1.4 jump straight to mod

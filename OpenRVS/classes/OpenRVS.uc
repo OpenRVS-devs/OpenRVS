@@ -26,15 +26,21 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 	local string warning;
 	local OpenPopUpWindow WarningWindow;
 
+	httpc = none;//the client destroys itself once this callback returns
+
 	if (resp.Code != 200)
 	{
 		class'OpenLogger'.static.Error("failed to retrieve latest version over http", self);
 		return;
 	}
 
-	// Trim the line break.
-	latest = resp.Body;
-//	latest = Left(latest, Len(latest)-1);//WHAT IS THIS? No line break, just trims the 4 out of "v1.4"
+	// The response body is the latest version string, e.g. "v1.6".
+	if (resp.Lines.Length == 0)
+	{
+		class'OpenLogger'.static.Error("latest version response was empty", self);
+		return;
+	}
+	latest = resp.Lines[0];
 
 	// Log version information to file.
 	// TODO: Also display a popup.
@@ -44,6 +50,8 @@ function CheckVersion(OpenHTTPClient.HttpResponse resp)
 		class'OpenLogger'.static.Warning(warning, self);
 		//v1.5 - add pop up box notification to main menu
 		WarningWindow = class'OpenPopUp'.static.CreatePopUp("OpenRVS Patch Check");
+		if ( WarningWindow == None )
+			return;
 		WarningWindow.AddText("Please note:");
 		WarningWindow.AddText(warning);
 		WarningWindow.AddText("Click the link below to download the latest update.");

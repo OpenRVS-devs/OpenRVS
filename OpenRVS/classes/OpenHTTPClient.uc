@@ -2,16 +2,18 @@
 // The base game only uses UDP, so this is only used by us.
 // TcpLink extends InternetLink extends InternetInfo extends Info extends Actor.
 // Use Spawn(class'OpenHTTPClient') to get an instance.
-// HTTP clients store an HttpResponse, an array<string> buffer, and a reference
-// to each callback provider. These are all reused and should not be set to None
-// after use. Instead, set your HTTP client instance to None with finished.
+// Each OpenHTTPClient handles exactly one request. Once the callback has run,
+// the client resets itself and destroys the actor, so callers should treat
+// their reference as dead after that point (set it to None in the callback).
+// Spawn a new client for every request; never keep one around after it has
+// finished, or it will tick forever without doing anything.
 // WARNING: UE2 only supports HTTP 1.0; HTTP 1.1 connections won't close before
 // timing out.
 // Instructions for using OpenHTTPClient:
 // 1. Write a callback function with the signature `function C(HttpResponse r)`.
 //    Your function can operate on the status code `r.Code` or the response
-//    body `r.Body`. This function should be added to the very bottom of this
-//    file.
+//    body lines `r.Lines`. This function should be added to the very bottom of
+//    this file.
 // 2. Add the name of your callback as a const in this class.
 // 3. Add a reference to your callback provider as a var in this class.
 // 4. Register your callback in the switch statement in triggerCallbacks().
@@ -34,8 +36,17 @@ struct ParsedURL
 struct HttpResponse
 {
 	var int Code;//e.g. 200 (OK) or 404 (Not Found)
-	var string Body;//response body
+	var array<string> Lines;//response body, split into lines
 };
+
+// A connection that is accepted but never answered would otherwise stay in
+// flight (and keep the client alive) for the rest of the session. Give up after
+// this many seconds and report an empty response (Code 0) so callers fall back.
+const HTTP_TIMEOUT = 30.0;
+
+// Real HTTP headers are a few hundred bytes at most. Cap the header search so a
+// malformed response that never ends its header cannot be copied without bound.
+const MAX_HEADER_BYTES = 8192;
 
 //
 // Instance Variables
@@ -77,10 +88,11 @@ event ResolveFailed()
 {
 	super.ResolveFailed();
 
-	class'OpenLogger'.static.Error("dns resolution failed", self);
-	triggerCallbacks();//caller still needs to process a result
+	if ( bPendingDelete || bDeleteMe )//cleanup already started, nothing to report
+		return;
 
-	super.Destroy();//clean up the connection
+	class'OpenLogger'.static.Error("dns resolution failed", self);
+	triggerCallbacks();//caller still needs to process a result; this also destroys the client
 }
 
 // Opened: Called when socket successfully connects.
@@ -108,7 +120,8 @@ event ReceivedText(string bytes)
 {
 	super.ReceivedText(bytes);
 
-	class'OpenLogger'.static.Debug("text received. size:" @ Len(bytes) @ "bytes", self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("text received. size:" @ Len(bytes) @ "bytes", self);
 	kiloBuffer[kiloBuffer.Length] = bytes;
 }
 
@@ -117,28 +130,38 @@ event ReceivedText(string bytes)
 event Closed()
 {
 	local HttpResponse resp;
-	local string bytes;
-	local int i;
+
+	// Ignore late events once cleanup has started (for example after the
+	// timeout, or while the socket is being closed by Destroy()).
+	if ( bPendingDelete || bDeleteMe )
+		return;
 
 	super.Closed();
 
 	class'OpenLogger'.static.Debug("connection closed, data is ready", self);
 
-	// Merge paged response data.
-	for (i=0; i<kiloBuffer.Length; i++)
-	{
-		bytes = bytes $ kiloBuffer[i];
-	}
-
-	resp = parseHttpResponse(bytes);
+	resp = parseHttpResponse(kiloBuffer);
 	if (resp.Code == -1)//this is not an HTTP response
-		return;//not relevant to HTTP client
-	class'OpenLogger'.static.Debug("response received with length" @ Len(resp.Body), self);
+	{
+		class'OpenLogger'.static.Debug("response was not HTTP, reporting failure", self);
+		triggerCallbacks();//report the empty response so callers can fall back
+		return;
+	}
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("response received with" @ resp.Lines.Length @ "body lines", self);
 	Response = resp;
 
 	if (Response.Code != 200)//warn and continue
 		class'OpenLogger'.static.Warning("http request failed with code" @ Response.Code, self);
 
+	triggerCallbacks();
+}
+
+// Fires when a request takes too long (see HTTP_TIMEOUT). Reports the empty
+// response so the caller can fall back, then cleans up like any other request.
+event Timer()
+{
+	class'OpenLogger'.static.Error("http request timed out", self);
 	triggerCallbacks();
 }
 
@@ -148,6 +171,7 @@ event Closed()
 
 // SendRequest() sends an HTTP request to the given URL. The response can be
 // passed to your code in triggerCallbacks(). Returns true on success.
+// A client only handles one request; spawn another one for the next request.
 function bool SendRequest(string url)
 {
 	local ParsedURL parsed;
@@ -159,6 +183,7 @@ function bool SendRequest(string url)
 		return false;
 	}
 	requestInFlight = true;
+	SetTimer(HTTP_TIMEOUT, false);//do not wait forever for a silent server
 
 	kiloBuffer.Remove(0, kiloBuffer.Length);
 
@@ -166,10 +191,17 @@ function bool SendRequest(string url)
 		class'OpenLogger'.static.Debug("callbackName should not be empty", self);
 
 	parsed = parseHttpUrl(url);
+	if ( parsed.Host == "" || parsed.Port < 1 || parsed.Port > 65535 )
+	{
+		class'OpenLogger'.static.Error("invalid HTTP URL", self);
+		triggerCallbacks();
+		return false;
+	}
 	Host = parsed.Host;
 	Port = parsed.Port;
 	Path = parsed.Path;
-	class'OpenLogger'.static.Debug("sending request to http://" $ Host $ ":" $ Port $ Path, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("sending request to http://" $ Host $ ":" $ Port $ Path, self);
 
 	BindPort();//create client socket
 	LinkMode = MODE_Text;
@@ -184,12 +216,14 @@ function bool SendRequest(string url)
 }
 
 // Fires any matching callbacks. Register new callbacks here.
+// This is the last thing a request does: the client is destroyed afterwards.
 private function triggerCallbacks()
 {
 	if (CallbackName == "")
 	{
 		class'OpenLogger'.static.Debug("callback name was empty", self);
-		return;//nothing to do
+		finishRequest();//nothing to call, but still clean up
+		return;
 	}
 	switch (CallbackName)
 	{
@@ -203,14 +237,35 @@ private function triggerCallbacks()
 			VersionCheckCallback(Response);
 			break;
 		default:
-			class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
+			if (class'OpenLogger'.static.IsDebugEnabled())
+				class'OpenLogger'.static.Debug("unknown callback name" @ CallbackName, self);
 			break;
 	}
 
-	resetHttpClient();//all done, get ready for next request
+	finishRequest();//all done, release the actor
 }
 
-// Resets and unlocks the instance to be used for the next request.
+// Cancel without delivering a result to the previous callback provider.
+function CancelRequest()
+{
+	SetTimer(0, false);
+	CallbackName = "";
+	ServerListCallbackProvider = None;
+	VersionCheckCallbackProvider = None;
+	finishRequest();
+}
+
+// Resets the instance and destroys it. A client is spawned per request and has
+// nothing left to do after its callback, so keeping it alive would only leave
+// an idle ticking TcpLink actor behind for the rest of the session.
+private function finishRequest()
+{
+	SetTimer(0, false);
+	resetHttpClient();
+	Destroy();
+}
+
+// Clears the per-request state before the client is destroyed.
 private function resetHttpClient()
 {
 	local HttpResponse emptyResp;
@@ -240,6 +295,11 @@ private static function ParsedURL parseHttpUrl(string url)
 	//after: ["http:", "", "www.example.com[:80]", "servers"]
 	numParts = class'OpenString'.static.Split(url, "/", urlParts);
 
+	if ( numParts < 3 )
+		return parsed;
+	if ( urlParts[2] == "" )
+		return parsed;
+
 	// Parse host and port.
 	if (InStr(urlParts[2], ":") == -1)//url does not contain port
 	{
@@ -264,12 +324,41 @@ private static function ParsedURL parseHttpUrl(string url)
 	return parsed;
 }
 
-// Parses an HTTP response string, returning the code and message body.
-private static function HttpResponse parseHttpResponse(string response)
+// Splits one response chunk into lines, appending complete lines to lines.
+// Returns the trailing incomplete line so a line that spans two chunks is not
+// lost. Only the current chunk is ever sliced, so the whole body is never copied
+// repeatedly.
+private static function string splitLines(string chunk, string carry, out array<string> lines)
+{
+	local int i;//index of the next line break
+
+	i = InStr(chunk, Chr(10));
+	while (i != -1)
+	{
+		carry = carry $ Left(chunk, i);
+		if ( Right(carry, 1) == Chr(13) )
+			carry = Left(carry, Len(carry)-1);
+		lines[lines.Length] = carry;
+		carry = "";
+		chunk = Mid(chunk, i+1);
+		i = InStr(chunk, Chr(10));
+	}
+	return carry $ chunk;//keep the incomplete line for the next chunk
+}
+
+// Parses an HTTP response, returning the code and the body split into lines.
+// The body arrives in 999-byte chunks, so only the (small, capped) header is
+// concatenated; the body is split into lines chunk by chunk. Concatenating every
+// chunk into one growing string would copy the body O(n^2) times.
+private static function HttpResponse parseHttpResponse(array<string> chunks)
 {
 	local string CRLF;
 	local HttpResponse resp;
-	local int bodyStartsAt;
+	local string header;//response up to and including the end of the header
+	local string carry;//line that continues in the next chunk
+	local array<string> lines;
+	local int headerEnd;//index of the blank line that ends the header
+	local int i;
 
 	// HTTP response format:
 	// First line is "HTTP/1.0 <HTTP CODE>" + CRLF e.g. "HTTP/1.0 200 OK"
@@ -277,17 +366,39 @@ private static function HttpResponse parseHttpResponse(string response)
 	// Next line is CRLF only.
 	// Remaining lines are HTTP response body.
 
-	if (Left(response, 4) != "HTTP")//this is not an HTTP response
-	{
-		resp.Code = -1;
+	resp.Code = -1;//not an HTTP response unless proven otherwise
+	if (chunks.Length == 0)
 		return resp;
-	}
-	resp.Code = int(Mid(response, 9, 11));//response code is always these three characters.
+	if (Left(chunks[0], 4) != "HTTP")//this is not an HTTP response
+		return resp;
 
-	// Two CRLF in a row precede response body.
+	// Find the blank line that ends the header. It may span two chunks, so
+	// search the chunks joined so far.
 	CRLF = Chr(13) $ Chr(10);
-	bodyStartsAt = InStr(response, CRLF $ CRLF);
-	resp.Body = Mid(response, bodyStartsAt+4);//4=bytes of CR LF CR LF
+	for (i = 0; i < chunks.Length; i++)
+	{
+		header = header $ chunks[i];
+		headerEnd = InStr(header, CRLF $ CRLF);
+		if (headerEnd != -1)
+			break;
+		if (Len(header) > MAX_HEADER_BYTES)//malformed response; do not keep growing
+			return resp;
+	}
+	if (headerEnd == -1)//no blank line, so this is not a complete HTTP response
+		return resp;
+
+	resp.Code = int(Mid(header, 9, 11));//response code is always these three characters.
+
+	// Split the body into lines. The body starts in the chunk where the header
+	// ended, so use the rest of that chunk; the remaining chunks are used as-is.
+	carry = splitLines(Mid(header, headerEnd+4), carry, lines);//4=bytes of CR LF CR LF
+	for (i = i+1; i < chunks.Length; i++)
+		carry = splitLines(chunks[i], carry, lines);
+	if ( Right(carry, 1) == Chr(13) )
+		carry = Left(carry, Len(carry)-1);
+	if (carry != "")//body did not end with a line break
+		lines[lines.Length] = carry;
+	resp.Lines = lines;
 
 	return resp;
 }
@@ -305,6 +416,8 @@ function ServerListCallback(HttpResponse resp)
 		class'OpenLogger'.static.Debug("ServerListCallbackProvider was none", self);
 		return;//nothing to do
 	}
+	if ( ServerListCallbackProvider.httpc != self )
+		return;//a newer request owns the provider now
 	ServerListCallbackProvider.ParseServers(resp);
 }
 
@@ -317,4 +430,12 @@ function VersionCheckCallback(HttpResponse resp)
 		return;//nothing to do
 	}
 	VersionCheckCallbackProvider.CheckVersion(resp);
+}
+
+defaultproperties
+{
+	// TcpLink turns this on by default, which keeps the actor ticking even in
+	// players-only mode. Socket polling does not need that here: the client only
+	// lives while a request is in flight, so let it tick like any other actor.
+	bAlwaysTick=False
 }

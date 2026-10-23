@@ -4,7 +4,7 @@
 //IMPORTANT: Servers with N4 Admin should not install this class
 //debug - should log any time an initial connection with client opens
 //installed server side
-class OpenBeacon extends UdpBeacon transient;
+class OpenBeacon extends UdpBeacon config(openrvs) transient;
 
 // RegistryServer refers to a server running github.com/willroberts/openrvs-registry.
 // This can be updated here, or disabled by commenting the RegisterServer() call
@@ -17,6 +17,11 @@ const MOTD_MAX_LEN = 60;//Container window can only display this many chars
 
 const DEFAULT_REGISTRY_HOST = "api.openrvs.org";//Host running openrvs-registry
 const DEFAULT_REGISTRY_PORT = 8080;//UDP beacon port
+
+// Fallback map list, created once if the game does not already have one.
+// R6MapList.PreBeginPlay() reads the server ini from disk, so spawning one per
+// beacon response would mean a disk read on every client refresh.
+var private R6MapList cachedMapList;
 
 // Fire off automatic server registration.
 function RegisterServer()
@@ -37,7 +42,8 @@ function RegisterServer()
 	} else {
 		// Register by IP without waiting for the Resolve() event.
 		addr.Port = RegistryServerPort;
-		class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
+		if (class'OpenLogger'.static.IsDebugEnabled())
+			class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
 		BroadcastBeacon(addr);
 		class'OpenLogger'.static.Debug("registration beacon sent", self);
 	}
@@ -46,7 +52,8 @@ function RegisterServer()
 event Resolved(IpAddr addr)
 {
 	addr.Port = RegistryServerPort;
-	class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("sending registration beacon to" @ RegistryServerHost @ "on port" @ RegistryServerPort, self);
 	BroadcastBeacon(addr);
 	class'OpenLogger'.static.Debug("registration beacon sent", self);
 }
@@ -61,13 +68,35 @@ event ReceivedText(IpAddr Addr, string Text)
 	local R6ServerInfo pServerOptions;
 	local BOOL bServerResistered;
 	pServerOptions = class'Actor'.static.GetServerOptions();
-	class'OpenLogger'.static.Debug("OpenBeacon received text:" @ Text, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("OpenBeacon received text:" @ Text, self);
 	if (Text == "REPORT")
 		BroadcastBeacon(Addr);
 	if (Text == "REPORTQUERY")
 		BroadcastBeaconQuery(Addr);
 	if (Text == "PREJOIN")
 		RespondPreJoinQuery(Addr);
+}
+
+// GetMapList() returns the server's map list without reloading it from disk.
+// The game spawns an R6MapList during InitGame and keeps it in the server
+// options, so reuse that one; it also reflects any in-game map list changes.
+// If it is missing, spawn one and keep it for later beacon responses.
+private function R6MapList GetMapList()
+{
+	local class<MapList> ML;
+	local R6ServerInfo pServerOptions;
+
+	pServerOptions = class'Actor'.static.GetServerOptions();
+	if ( pServerOptions != None && pServerOptions.m_ServerMapList != None )
+		return pServerOptions.m_ServerMapList;
+
+	if ( cachedMapList == None )
+	{
+		ML = class<MapList>(DynamicLoadObject("Engine.R6MapList", class'Class'));
+		cachedMapList = R6MapList(spawn(ML));
+	}
+	return cachedMapList;
 }
 
 // BuildBeaconText() formats the UDP message for the server beacon protocol.
@@ -77,9 +106,7 @@ function string BuildBeaconText()
 {
 	local string textData;
 	local INT integerData;
-	local string MapListType;
-	local MapList myList;
-	local class<MapList> ML;
+	local R6MapList myList;
 	local INT iCounter;
 	local PlayerController aPC;
 	local INT iNumPlayers;
@@ -92,6 +119,8 @@ function string BuildBeaconText()
 
 	// Custom OpenRVS fields
 	local string motd;
+	local string mapNames;//MapListMarker section
+	local string gameTypeNames;//MenuGmNameMarker section
 
 	pServerOptions = class'Actor'.static.GetServerOptions();
 	textData = KeyWordMarker $ " ";
@@ -116,33 +145,33 @@ function string BuildBeaconText()
 	else
 		integerData = 0;
 	textData = textData @ DecicatedMarker @ integerData;
-	MapListType = "Engine.R6MapList";
-	ML = class<MapList>(DynamicLoadObject(MapListType, class'Class'));
-	myList = spawn(ML);
-	textData = textData @ MapListMarker $ " ";
+	myList = GetMapList();
+	mapNames = "";
+	gameTypeNames = "";
+	if ( myList != None )
 	for ( iCounter = 0; iCounter < arraycount(myList.Maps); iCounter++ )
 	{
 		if ( myList.Maps[iCounter] != "" )
 		{
 			if ( InStr(myList.Maps[iCounter], ".") == -1 )
-				textData = textData $ "/" $ myList.Maps[iCounter];
+				mapNames = mapNames $ "/" $ myList.Maps[iCounter];
 			else
-				textData = textData $ "/" $ left( myList.Maps[iCounter], InStr(myList.Maps[iCounter], ".") );
+				mapNames = mapNames $ "/" $ left( myList.Maps[iCounter], InStr(myList.Maps[iCounter], ".") );
 		}
+		// Empty map slots still contribute their (empty) game type, matching the
+		// stock beacon output that clients already expect.
+		gameTypeNames = gameTypeNames $ "/" $ Level.GetGameTypeFromClassName(myList.GameType[iCounter]);
 	}
-	textData = textData @ MenuGmNameMarker $ " ";
-	for ( iCounter = 0; iCounter < arraycount(myList.Maps); iCounter++ )
-	{
-		textData = textData $ "/" $ Level.GetGameTypeFromClassName(R6MapList(myList).GameType[iCounter]) ;
-	}
-	myList.Destroy();
+	textData = textData @ MapListMarker $ " " $ mapNames;
+	textData = textData @ MenuGmNameMarker $ " " $ gameTypeNames;
 	textData = textData @ PlayerListMarker $ " ";
 	CheckForPlayerTimeouts();
 	iNumPlayers = 0;
 	for (_Controller=Level.ControllerList; _Controller!=None; _Controller=_Controller.NextController)
 	{
 		aPC = PlayerController(_Controller);
-		if (aPC!=none)
+		if (aPC!=none && iNumPlayers < arraycount(iPingTimeMS)
+			&& iNumPlayers < arraycount(iKillCount) && iNumPlayers < arraycount(fPlayingTime))
 		{
 			textData = textData $ "/" $ aPC.PlayerReplicationInfo.PlayerName;
 			if ( NetConnection( aPC.Player) == None )

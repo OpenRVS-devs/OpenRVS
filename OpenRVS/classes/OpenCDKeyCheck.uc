@@ -51,14 +51,16 @@ function ProcessGSMsg(string Msg)
 
 function PopUpBoxDone(MessageBoxResult Result,EPopUpID _ePopUpID)
 {
-	class'OpenLogger'.static.Debug("PopUpBoxDone: " $ Result @ _ePopUpID, self);
+	if (class'OpenLogger'.static.IsDebugEnabled())
+		class'OpenLogger'.static.Debug("PopUpBoxDone: " $ Result @ _ePopUpID, self);
 	if ( ( Result == MR_OK ) && ( _ePopUpID == EPopUpID_EnterCDKey ) )
 	{
 		m_pPleaseWait.ShowWindow();
 		//crack fix:
 		m_GameService.SaveInfo();
 		m_pPleaseWait.HideWindow();
-		class'OpenLogger'.static.Debug("IS GAME LOCKED? " $ m_preJoinRespInfo.bLocked, self);
+		if (class'OpenLogger'.static.IsDebugEnabled())
+			class'OpenLogger'.static.Debug("IS GAME LOCKED? " $ m_preJoinRespInfo.bLocked, self);
 		class'OpenLogger'.static.Debug("handlepunkbustersvrs", self);
 		HandlePunkBusterSvrSituation();
 		class'OpenLogger'.static.Debug("done handlepunk", self);
