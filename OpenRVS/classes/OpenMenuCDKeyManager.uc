@@ -4,6 +4,16 @@ class OpenMenuCDKeyManager extends R6MenuCDKeyManager;
 // Retained across menu recreation on failed travel; never saved to disk.
 var string JoinCompatibilityInfo;
 
+function StartCDKeyProcess(optional R6WindowUbiCDKeyCheck.eJoinRoomChoice _eJoinUbiComRoom,
+    optional ClientBeaconReceiver.PreJoinResponseInfo _preJResponseInfo)
+{
+    // A saved activation ID skips UP_ENTER_CD_KEY, which OpenCDKeyCheck
+    // intercepts to bypass the retired Ubisoft validation service. Reset it
+    // here for every pre-join entry point, including listen-server creation.
+    m_pCDKeyCheckWindow.m_GameService.m_bValidActivationID = false;
+    super.StartCDKeyProcess(_eJoinUbiComRoom, _preJResponseInfo);
+}
+
 // In 1.60 the CD-key manager owns the final browser/Join IP travel step.
 function JoinServer(string _szIPAddress, optional string _szPassword)
 {
