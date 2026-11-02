@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build OpenRVS and copy the pinned OpenRenderFix binary with Twi's Raven Shield SDK2.
+# Build OpenRVS and OpenRenderFix from source with Twi's Raven Shield SDK2.
 #
 # This script drives the Windows UCC.exe toolchain under Wine but handles all
 # staging, ini generation, stripping, and artifact copying with native Linux
@@ -28,8 +28,8 @@ PACKAGES="${PACKAGES:-OpenRVS OpenRenderFix}"
 STRIP="${STRIP:-1}"
 ALLOW_OVERWRITE="${ALLOW_OVERWRITE:-0}"
 
-PINNED_RENDER="$REPO_ROOT/vendor/OpenRenderFix-v1.6"
 ALL_PACKAGES="OpenRVS OpenRenderFix"
+readonly OPENRENDERFIX_SHA256=b4a1915a059d2c8f4e21754b7cd4e489e71781c72b99786ae2287fa3215ae3f4
 MODE=build
 INI_GENERATED=0
 INI_HAD_ORIGINAL=0
@@ -435,17 +435,25 @@ strip_packages() {
 	done
 }
 
+validate_renderfix() {
+	local p actual
+
+	for p in $PACKAGES; do
+		[[ "$p" == OpenRenderFix ]] || continue
+		actual="$(sha256sum -- "$SYS/OpenRenderFix.u")"
+		actual="${actual%% *}"
+		[[ "$actual" == "$OPENRENDERFIX_SHA256" ]] || die "OpenRenderFix.u SHA-256 mismatch: expected $OPENRENDERFIX_SHA256, got $actual"
+		log "verified OpenRenderFix.u SHA-256: $actual"
+	done
+}
+
 copy_artifacts() {
 	local p artifacts=()
 
 	mkdir -p -- "$BUILD_DIR"
-	for p in $REQUESTED_PACKAGES; do
+	for p in $PACKAGES; do
 		rm -f -- "$BUILD_DIR/$p.utx"
-		if [[ "$p" == OpenRenderFix ]]; then
-			cp -f -- "$PINNED_RENDER/OpenRenderFix.u" "$BUILD_DIR/$p.u"
-		else
-			cp -f -- "$SYS/$p.u" "$BUILD_DIR/$p.u"
-		fi
+		cp -f -- "$SYS/$p.u" "$BUILD_DIR/$p.u"
 		artifacts+=("$BUILD_DIR/$p.u")
 
 	done
@@ -498,21 +506,13 @@ case "$MODE" in
 		fi
 		;;
 	build)
-		# Never rebuild the network-distributed package under its existing name.
-		(cd "$PINNED_RENDER" && sha256sum --check SHA256SUMS) || die "invalid pinned OpenRenderFix binary"
-		REQUESTED_PACKAGES="$PACKAGES"
-		PACKAGES=""
-		for p in $REQUESTED_PACKAGES; do
-			[[ "$p" == OpenRenderFix ]] || PACKAGES+=" $p"
-		done
-		if [[ -n "${PACKAGES// /}" ]]; then
-			check_prereqs
-			stage_sources
-			select_sdk_version
-			generate_ini
-			compile_packages
-			strip_packages
-		fi
+		check_prereqs
+		stage_sources
+		select_sdk_version
+		generate_ini
+		compile_packages
+		strip_packages
+		validate_renderfix
 		copy_artifacts
 		;;
 esac

@@ -56,10 +56,6 @@ var float fLastListRebuild;//1.7 - time of the last rebuild, used to coalesce re
 // Overrides the matching function in R6MenuMultiPlayerWidget.
 function QueryReceivedStartPreJoin ()
 {
-	// A saved activation ID skips UP_ENTER_CD_KEY, which OpenCDKeyCheck
-	// intercepts to bypass the retired Ubisoft validation service. Always
-	// take that path, including after a previous LAN connection (issue #62).
-	m_GameService.m_bValidActivationID = false;
 	R6MenuRootWindow(Root).m_pMenuCDKeyManager.StartCDKeyProcess(EJRC_NO,
 		m_GameService.m_ClientBeacon.PreJoinInfo);
 }
